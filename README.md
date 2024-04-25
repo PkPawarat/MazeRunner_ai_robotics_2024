@@ -55,6 +55,8 @@ To run MazeRunner, follow these steps:
 1. **Setup Environment**:
 
    - Install the necessary dependencies and libraries.
+   - "python .\setup.py install"
+   - use python 3.12.2 version
    - Set up the maze environment.
 
 2. **Training**:
