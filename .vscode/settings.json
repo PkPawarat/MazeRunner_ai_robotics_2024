@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./simple-car-env-template"
+    ]
+}
