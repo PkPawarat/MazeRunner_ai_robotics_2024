@@ -7,10 +7,10 @@ Tags: large, game, maze"""
 import sys, os
 
 # Maze file constants:
-WALL = '#'
-EMPTY = ' '
-START = 'S'
-EXIT = 'E'
+WALL = '#'              # when running the reset function in simple drive when it read the wall place wall
+EMPTY = ' '             
+START = 'S'             # place robot in this location
+EXIT = 'E'              # place goal in this location
 
 PLAYER = '@'  # (!) Try changing this to '+' or 'o'.
 BLOCK = chr(9617)  # Character 9617 is '░'
