@@ -29,12 +29,12 @@ import torch.nn.functional as F
 import torch.optim as optim
 import os
 
-TRAIN = False  # if set to false will skip training, load the last saved model and use that for testing
+TRAIN = True  # if set to false will skip training, load the last saved model and use that for testing
 USE_PREVIOUS_MODEL = True # if set to false will not use the previous model but will use the current model
 
 # Hyper parameters that will be used in the DQN algorithm
-EPISODES = 2500                 # number of episodes to run the training for
-LEARNING_RATE = 0.00125         # the learning rate for optimising the neural network weights
+EPISODES = 5000                 # number of episodes to run the training for
+LEARNING_RATE = 0.00025         # the learning rate for optimising the neural network weights
 MEM_SIZE = 50000                # maximum size of the replay memory - will start overwritting values once this is exceed
 REPLAY_START_SIZE = 10000       # The amount of samples to fill the replay memory with before we start learning
 BATCH_SIZE = 64                 # Number of random samples from the replay memory we use for training each iteration
@@ -205,8 +205,8 @@ class DQN_Solver:
 
 ############################################################################################
 ## if there is training data available. Check if the model file exists
-model_file = "policy_network_.pkl"
-previous_model_file = "policy_network_.pkl"
+previous_model_file = "policy_network_run_around_maze_v2.pkl"
+model_file = "policy_network_run_around_maze_v2.pkl"
 
 # Train network
 if TRAIN:
@@ -255,6 +255,7 @@ if TRAIN:
             # only start learning once replay memory reaches REPLAY_START_SIZE
             if agent.memory.mem_count > REPLAY_START_SIZE:
                 agent.learn()
+                # print("reward --- ", reward)
             
             state = state_
             episode_batch_score += reward

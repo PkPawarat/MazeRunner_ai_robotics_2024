@@ -4,11 +4,11 @@ import math
 
 
 class Car:
-    def __init__(self, client):
+    def __init__(self, client, base):
         self.client = client
         f_name = os.path.join(os.path.dirname(__file__), 'simplecar.urdf')
         self.car = self.client.loadURDF(fileName=f_name,
-                              basePosition=[0, 0, 0.1])
+                              basePosition=[base[0], base[1], 0.1])
 
         # Joint indices as found by p.getJointInfo()
         self.steering_joints = [0, 2]

@@ -7,6 +7,8 @@ from simple_driving.resources.car import Car
 from simple_driving.resources.plane import Plane
 from simple_driving.resources.goal import Goal
 from simple_driving.resources.obstacle import Obstacle
+from simple_driving.resources.wall import Wall
+from maze import MazeClass
 import matplotlib.pyplot as plt
 import time
 import os
@@ -28,8 +30,8 @@ class SimpleDrivingEnv(gym.Env):
         #     low=np.array([-40, -40, -40, -40, -40, -40, -40, -40, -40, -40], dtype=np.float32),
         #     high=np.array([40, 40, -40, -40, -40, -40, -40, -40, -40, -40], dtype=np.float32))
         self.observation_space = gym.spaces.box.Box(
-            low=np.array([-40, -40], dtype=np.float32),
-            high=np.array([40, 40], dtype=np.float32))
+            low=np.array([-80, -80], dtype=np.float32),
+            high=np.array([80, 80], dtype=np.float32))
         self.np_random, _ = gym.utils.seeding.np_random()
 
         if renders:
@@ -50,12 +52,11 @@ class SimpleDrivingEnv(gym.Env):
         self.rendered_img = None
         self.render_rot_matrix = None
         
-        self.obstacle_position = []
-        self.obstacle_radius = 1     # obstacle radius
-        self.obstacle_objects = [] # list of obstacle objects
+        self.walls = [] # list of walls 
+        self.maze = None # list of walls 
         
-        
-        self.reset()
+        self.listPos = [] # list of previously positions 
+        # self.reset()
         self._envStepCounter = 0
 
     def step(self, action):
@@ -94,22 +95,39 @@ class SimpleDrivingEnv(gym.Env):
         
         # Done by reaching goal
         if dist_to_goal < 1.5 and not self.reached_goal:
-            print("reached goal")
+            print("reached goal________________________________________________________________")
             self.done = True
             self.reached_goal = True
-            reward += 500 # if it's reached goal add reward 50
+            reward += 50 # if it's reached goal add reward 50
             
         ob = car_ob
         
-        # Penalize collision with obstacle by check the distance of the obstacle to car pos
-        for obstacle in self.obstacle_objects:
-            obj, reward_, collide = self.getExtendedObservationFromCarToObstacle(obstacle.obstacle)
-            reward += reward_
-            # ob.extend(obj)
-        if collide:
-            print("collision with obstacle")
-            reward += -100
-            self.done = True
+        # # Convert list positions to numpy arrays
+        # if self._envStepCounter % 1000 == 0:
+        #     ob_np = np.array(ob)
+        #     listPos_np = np.array(self.listPos)
+
+        #     # Calculate distances
+        #     distances = np.linalg.norm(listPos_np - ob_np, axis=1)
+
+        #     # Check if any position in listPos is within the range of 0.5 units close to car_ob
+        #     is_close = any(distances < 0.05)
+            
+        #     # # Debugging: Print out the positions in listPos for easier debugging
+        #     # print("Positions in listPos:", listPos_np)
+
+        #     if is_close:
+        #         reward += -50
+        #         self.done = True
+            
+        #     self.listPos.append(car_ob)
+            
+        
+        # closestwall, closestwallpos, rewardWall = self.closestWall()
+        # if rewardWall < 0:
+        #     print("hit wall")
+        #     reward = -500
+        #     self.done = True
         
         return ob, reward, self.done, dict()
 
@@ -123,52 +141,35 @@ class SimpleDrivingEnv(gym.Env):
         self._p.setGravity(0, 0, -10)
         # Reload the plane and car
         Plane(self._p)
-        self.car = Car(self._p)
+        
+        self.listPos.clear()
+        # Visual maze element in the environment
+        maze = MazeClass("_all-mazes\maze25x25s2.txt")
+        self.maze = maze.readMazeFile()
+        max_x = max([coord[0] for coord in self.maze.keys()]) + 1
+        max_y = max([coord[1] for coord in self.maze.keys()]) + 1
+        # print("Maze X:", max_x)
+        # print("Maze Y:", max_y)        
+        for y in range(max_y):
+            for x in range(max_x):
+                if self.maze[(x, y)] == maze.WALL:
+                    wall = (x-(max_x/2), y-(max_y/2))
+                    self.walls.append(Wall(self._p, wall))
+                    
+                if self.maze[(x,y)] == maze.START:
+                    start = (x-(max_x/2), y-(max_y/2))
+                    self.car = Car(self._p, start)
+                
+                if self.maze[(x,y)] == maze.EXIT:
+                    # Visual element of the goal
+                    self.goal = (x-(max_x/2), y-(max_y/2))
+                    self.goal_object = Goal(self._p, self.goal)
+
         self._envStepCounter = 0
 
-        # Set the goal to a random target
-        x = (self.np_random.uniform(5, 9) if self.np_random.integers(2) else
-             self.np_random.uniform(-9, -5))
-        y = (self.np_random.uniform(5, 9) if self.np_random.integers(2) else
-             self.np_random.uniform(-9, -5))
-        self.goal = (x, y)
         self.done = False
         self.reached_goal = False
 
-        # Visual element of the goal
-        self.goal_object = Goal(self._p, self.goal)
-
-        # # Visual obstacle element in the environment
-        self.obstacle_position = []
-        self.obstacle_objects = []
-        x_obstacle = 3
-        y_obstacle = 3
-        self.obstacle_position.append((x_obstacle, y_obstacle))
-        self.obstacle_objects.append(Obstacle(self._p, self.obstacle_position[0]))
-        x_obstacle = 3
-        y_obstacle = -3
-        self.obstacle_position.append((x_obstacle, y_obstacle))
-        self.obstacle_objects.append(Obstacle(self._p, self.obstacle_position[1]))
-        x_obstacle = -3
-        y_obstacle = 3
-        self.obstacle_position.append((x_obstacle, y_obstacle))
-        self.obstacle_objects.append(Obstacle(self._p, self.obstacle_position[2]))
-        x_obstacle = -3
-        y_obstacle = -3
-        self.obstacle_position.append((x_obstacle, y_obstacle))
-        self.obstacle_objects.append(Obstacle(self._p, self.obstacle_position[3]))
-
-        # if x < 0:
-        #     x_obs = x + 3
-        # else:
-        #     x_obs = x- 3
-       
-        # if y < 0:
-        #     y_obs = y + 3
-        # else:
-        #     y_obs = y - 3
-        # self.obstacle = (x_obs, y_obs)
-        
         # Get observation to return
         carpos = self.car.get_observation()
 
@@ -176,11 +177,9 @@ class SimpleDrivingEnv(gym.Env):
                                            (carpos[1] - self.goal[1]) ** 2))
         
         car_ob = self.getExtendedObservation()
+        self.listPos.append(car_ob)
         # Concatenate car's extended observation with the closest obstacle position
         ob = car_ob
-        # for obstacle in self.obstacle_objects:
-        #     obj, _, _ = self.getExtendedObservationFromCarToObstacle(obstacle.obstacle)
-        #     ob.extend(obj)
 
         return ob
 
@@ -247,29 +246,64 @@ class SimpleDrivingEnv(gym.Env):
         goalPosInCar, goalOrnInCar = self._p.multiplyTransforms(invCarPos, invCarOrn, goalpos, goalorn)
 
         observation = [goalPosInCar[0], goalPosInCar[1]]
+        # observation = [carpos[0], carpos[1]]
         return observation
     
-    def getExtendedObservationFromCarToObstacle(self, obstacle_object):
-        # self._observation = []  #self._racecar.getObservation()
-        carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
-        obspos, obsorn = self._p.getBasePositionAndOrientation(obstacle_object)
-        invCarPos, invCarOrn = self._p.invertTransform(carpos, carorn)
-        obsPosInCar, obsOrnInCar = self._p.multiplyTransforms(invCarPos, invCarOrn, obspos, obsorn)
+    def closestWall(self):
+        """
+        Finds the closest wall to the car in the simulation environment.
 
-        observation = [obsPosInCar[0], obsOrnInCar[1]]
+        This function assumes the following:
+            - self._p refers to a physics engine client (e.g., PyBullet)
+            - self.car.car is the name of the car object
+            - self.walls is an iterable containing wall objects in the environment
+            - Each wall object has a property named 'wall' that represents its visual or collision representation
+
+        Returns:
+            The closest wall object (or None if no walls are found)
+        """
+
+        carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
+        invCarPos, invCarOrn = self._p.invertTransform(carpos, carorn)
+
+        # Define car's dimensions for calculating the points
+        car_length = 0.6  # Length of the car
+        car_width = 0.5   # Width of the car
+
+        # Define four points on the car representing its corners
+        car_points = [
+            ((car_length / 2)+carpos[0], (car_width / 2)+carpos[1]),   # Front right
+            ((car_length / 2)+carpos[0], -(car_width / 2)+carpos[1]),  # Front left
+            (-(car_length / 2)+carpos[0], (car_width / 2)+carpos[1]),  # Back right
+            (-(car_length / 2)+carpos[0], -(car_width / 2)+carpos[1])  # Back left
+        ]
+
+        closest_wall_pos = float('inf')  # Initialize minimum distance to positive infinity
+        closest_wall = None  # Initialize closest wall to None
         reward = 0
-        collide = False
-        dist_to_obs = math.sqrt(((carpos[0] - obsPosInCar[0]) ** 2 +
-                            (carpos[1] - obsPosInCar[1]) ** 2))
-        if dist_to_obs <= self.obstacle_radius:
-            reward = -100
-            collide = True
-            
-        return observation, reward, collide
-    
+
+        for wall in self.walls:
+            wall_pos, _ = self._p.getBasePositionAndOrientation(wall.wall)
+
+            # Check each car point against the wall
+            for point in car_points:
+                # Calculate distance between the point and the wall
+                distance = math.sqrt((point[0] - wall_pos[0]) ** 2 + (point[1] - wall_pos[1]) ** 2)
+
+                if distance < closest_wall_pos:
+                    closest_wall_pos = distance
+                    closest_wall = wall
+
+                    if closest_wall_pos <= 0.6:
+                        reward = -50
+                        return closest_wall, closest_wall_pos, reward
+
+        return closest_wall, closest_wall_pos, reward
+                
+
 
     def _termination(self):
-        return self._envStepCounter > 2000
+        return self._envStepCounter > 10000
 
     def close(self):
         self._p.disconnect()

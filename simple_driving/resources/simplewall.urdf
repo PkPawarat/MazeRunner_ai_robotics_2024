@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<robot name="wall">
+
+  <link name="wall_link">
+    <inertial>
+      <mass value="0.0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+
+    <visual name="wall_visual">
+      <geometry>
+        <box size="1.0 1.0 2.5"/> </geometry>
+      <material name="GrayTransparent">  <color rgba="0.5 0.5 0.5 0.5"/>  </material>
+    </visual>
+
+    <collision name="wall_collision">
+      <geometry>
+        <box size="1.0 1.0 2.5"/>
+      </geometry>
+    </collision>
+
+    <joint name="fixed_joint" type="fixed">
+      <parent name="world"/>
+      <child name="wall_link"/>
+    </joint>
+  </link>
+</robot>
