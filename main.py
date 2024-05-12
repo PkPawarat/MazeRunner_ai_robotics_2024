@@ -29,7 +29,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import os
 
-TRAIN = True  # if set to false will skip training, load the last saved model and use that for testing
+TRAIN = False  # if set to false will skip training, load the last saved model and use that for testing
 USE_PREVIOUS_MODEL = True # if set to false will not use the previous model but will use the current model
 
 # Hyper parameters that will be used in the DQN algorithm
@@ -201,15 +201,7 @@ class DQN_Solver:
     def returning_epsilon(self):
         return self.exploration_rate
 
-
-
-############################################################################################
-## if there is training data available. Check if the model file exists
-previous_model_file = "policy_network_run_around_maze_v2.pkl"
-model_file = "policy_network_run_around_maze_v2.pkl"
-
-# Train network
-if TRAIN:
+def train_model():
     # Start time for Training
     start_time = time.time()
     # create training model for simple driving 
@@ -283,32 +275,47 @@ if TRAIN:
     plt.plot(episode_history, episode_reward_history)
     plt.show()
 
-
-###########################################################################################
-# Test trained policy for 10 time
-env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
-agent = DQN_Solver(env)
-print("Start loading training policy")
-agent.policy_network.load_state_dict(torch.load(model_file))
-print("finished loading training policy")
-
-for i in range(10):
-    state = env.reset()[0]
+def test_model(model_file):
+    env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
+    agent = DQN_Solver(env)
+    agent.policy_network.load_state_dict(torch.load(model_file))
     agent.policy_network.eval()
 
-    while True:
-        with torch.no_grad():
-            q_values = agent.policy_network(torch.tensor(state, dtype=torch.float32))
-        action = torch.argmax(q_values).item() # select action with highest predicted q-value
-        state_, reward, done, info, _ = env.step(action)
-        state = state_
+    for _ in range(10):
+        state = env.reset()[0]
+        total_reward = 0
+        while True:
+            with torch.no_grad():
+                q_values = agent.policy_network(torch.tensor(state, dtype=torch.float32))
+            action = torch.argmax(q_values).item()
+            state, reward, done, _ = env.step(action)
+            total_reward += reward
+            env.render()
+            if done:
+                print(f"Test completed with reward: {total_reward}")
+                break
+    time.sleep(5)
+    env.close()
+
+def load_and_render_simulator():
+    env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
+    state = env.reset()[0]
+    done = False
+    while not done:
+        _, _, done,_, _ = env.step(env.action_space.sample())  # Take random actions
         env.render()
-        # time.sleep(1/30)
-        if done:
-            print("Training is finished")
-            break
+    env.close()
 
+############################################################################################
+## if there is training data available. Check if the model file exists
+previous_model_file = "policy_network_run_around_maze_v2.pkl"
+model_file = "policy_network_run_around_maze_v2.pkl"
 
-time.sleep(5)
+if __name__ == "__main__":
+    # if TRAIN:
+    #     train_model()
+    # else:
+    #     test_model()
 
-env.close()
+    load_and_render_simulator()
+
