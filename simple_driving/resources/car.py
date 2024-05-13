@@ -1,14 +1,20 @@
 import pybullet as p
 import os
 import math
+import numpy as np
 
 
 class Car:
     def __init__(self, client, base):
         self.client = client
         f_name = os.path.join(os.path.dirname(__file__), 'simplecar.urdf')
+        # Load URDF with rotation
+        orientation = p.getQuaternionFromEuler([0, 0, np.pi/2])  # Rotate by 90 degrees around Z-axis
         self.car = self.client.loadURDF(fileName=f_name,
-                              basePosition=[base[0], base[1], 0.1])
+                                         basePosition=[base[0], base[1], 0.1],
+                                         baseOrientation=orientation)
+        # self.car = self.client.loadURDF(fileName=f_name,
+        #                       basePosition=[base[0], base[1], 0.1])
 
         # Joint indices as found by p.getJointInfo()
         self.steering_joints = [0, 2]
@@ -44,7 +50,7 @@ class Car:
                                         self.c_rolling)
         acceleration = self.c_throttle * throttle + friction
         # Each time step is 1/240 of a second
-        self.joint_speed = min(self.joint_speed + 0.01 * acceleration, 10.0)
+        self.joint_speed = min(self.joint_speed + 0.01 * acceleration, 5.0)    # max speed value should be just 5 
         # if self.joint_speed < 0:
         #     self.joint_speed = 0
 

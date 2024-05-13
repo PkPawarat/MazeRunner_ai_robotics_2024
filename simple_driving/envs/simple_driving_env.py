@@ -78,12 +78,12 @@ class SimpleDrivingEnv(gym.Env):
           
           
           # Simulate LiDAR
-          lidar_data = self.simulate_lidar()
+        #   lidar_data = self.simulate_lidar()
           #print("Lidar data:", lidar_data)
           carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
           goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_objects[self.current_goal].goal)
           
-          car_ob = self.getExtendedObservation() + lidar_data  # Append LiDAR data to the car's observation
+          car_ob = self.getExtendedObservation()# + lidar_data  # Append LiDAR data to the car's observation
           
           if self._termination():
             self.done = True
@@ -99,7 +99,7 @@ class SimpleDrivingEnv(gym.Env):
         self.prev_dist_to_goal = dist_to_goal
         
         # Done by reaching goal
-        if dist_to_goal < 0.5 and not self.reached_goal:
+        if dist_to_goal < 1 and not self.reached_goal:
             # print("Current goal -> Total goals:", self.current_goal, "->", len(self.goal_objects)-1)
             reward += 50 # if it's reached goal add reward 50
             
@@ -107,6 +107,7 @@ class SimpleDrivingEnv(gym.Env):
                 self.done = True
                 self.reached_goal = True
                 print("reached last goal____________Current goal -> Total goals:", self.current_goal, "->", len(self.goal_objects)-1)
+                reward += 500 # if it's reached goal add reward 50
             else: 
                 self.goal_objects[self.current_goal].delete()
                 self.current_goal += 1
@@ -165,7 +166,7 @@ class SimpleDrivingEnv(gym.Env):
         self.path_planner = pathplanning.PathPlanning()
         
         # Visual maze element in the environment
-        maze = MazeClass("./_all-mazes/maze25x25s2.txt")
+        maze = MazeClass("./_all-mazes/maze25x25s3.txt")
         self.maze = maze.readMazeFile()
         max_x = max([coord[0] for coord in self.maze.keys()]) + 1
         max_y = max([coord[1] for coord in self.maze.keys()]) + 1

@@ -33,7 +33,7 @@ TRAIN = True  # if set to false will skip training, load the last saved model an
 USE_PREVIOUS_MODEL = True # if set to false will not use the previous model but will use the current model
 
 # Hyper parameters that will be used in the DQN algorithm
-EPISODES = 5000                 # number of episodes to run the training for
+EPISODES = 10000                 # number of episodes to run the training for
 LEARNING_RATE = 0.00025         # the learning rate for optimising the neural network weights
 MEM_SIZE = 50000                # maximum size of the replay memory - will start overwritting values once this is exceed
 REPLAY_START_SIZE = 10000       # The amount of samples to fill the replay memory with before we start learning
@@ -288,7 +288,7 @@ def test_model(model_file):
             with torch.no_grad():
                 q_values = agent.policy_network(torch.tensor(state, dtype=torch.float32))
             action = torch.argmax(q_values).item()
-            state, reward, done, _ = env.step(action)
+            state, reward, done, info, _ = env.step(action)
             total_reward += reward
             env.render()
             if done:
@@ -308,14 +308,14 @@ def load_and_render_simulator():
 
 ############################################################################################
 ## if there is training data available. Check if the model file exists
-previous_model_file = "policy_network_run_around_maze_v2.pkl"
-model_file = "policy_network_run_around_maze_v2.pkl"
+previous_model_file = "policy_network_run_around_maze_v3_PK.pkl"
+model_file = "policy_network_run_around_maze_v3_PK.pkl"
 
 if __name__ == "__main__":
-    # if TRAIN:
-    #     train_model()
-    # else:
-    #     test_model()
+    if TRAIN:
+        train_model()
+    else:
+        test_model(model_file)
 
     load_and_render_simulator()
 
