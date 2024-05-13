@@ -29,7 +29,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import os
 
-TRAIN = False  # if set to false will skip training, load the last saved model and use that for testing
+TRAIN = True  # if set to false will skip training, load the last saved model and use that for testing
 USE_PREVIOUS_MODEL = True # if set to false will not use the previous model but will use the current model
 
 # Hyper parameters that will be used in the DQN algorithm

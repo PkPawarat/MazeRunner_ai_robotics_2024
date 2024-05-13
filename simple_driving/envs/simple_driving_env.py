@@ -8,6 +8,7 @@ from simple_driving.resources.plane import Plane
 from simple_driving.resources.goal import Goal
 from simple_driving.resources.obstacle import Obstacle
 from simple_driving.resources.wall import Wall
+import pathplanning 
 from maze import MazeClass
 import matplotlib.pyplot as plt
 import time
@@ -26,9 +27,6 @@ class SimpleDrivingEnv(gym.Env):
             self.action_space = gym.spaces.box.Box(
                 low=np.array([-1, -.6], dtype=np.float32),
                 high=np.array([1, .6], dtype=np.float32))
-        # self.observation_space = gym.spaces.box.Box(
-        #     low=np.array([-40, -40, -40, -40, -40, -40, -40, -40, -40, -40], dtype=np.float32),
-        #     high=np.array([40, 40, -40, -40, -40, -40, -40, -40, -40, -40], dtype=np.float32))
         self.observation_space = gym.spaces.box.Box(
             low=np.array([-80, -80], dtype=np.float32),
             high=np.array([80, 80], dtype=np.float32))
@@ -46,6 +44,7 @@ class SimpleDrivingEnv(gym.Env):
         self._isDiscrete = isDiscrete
         self.car = None
         self.goal_object = None
+        self.goal_objects = []
         self.goal = None
         self.done = False
         self.prev_dist_to_goal = None
@@ -55,7 +54,11 @@ class SimpleDrivingEnv(gym.Env):
         self.walls = [] # list of walls 
         self.maze = None # list of walls 
         
-        self.listPos = [] # list of previously positions 
+        self.current_goal = None # current goal object
+        self.path_planner = None 
+        self.start_node = None # start node
+        self.end_node = None # end node
+        self.shortest_path = [] # shortest path
         # self.reset()
         self._envStepCounter = 0
 
@@ -74,7 +77,7 @@ class SimpleDrivingEnv(gym.Env):
             time.sleep(self._timeStep)
 
           carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
-          goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_object.goal)
+          goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_objects[self.current_goal].goal)
           
           car_ob = self.getExtendedObservation()
 
@@ -85,8 +88,6 @@ class SimpleDrivingEnv(gym.Env):
           self._envStepCounter += 1
 
         # Compute reward as L2 change in distance to goal
-        # dist_to_goal = math.sqrt(((car_ob[0] - self.goal[0]) ** 2 +
-                                  # (car_ob[1] - self.goal[1]) ** 2))
         dist_to_goal = math.sqrt(((carpos[0] - goalpos[0]) ** 2 +
                                   (carpos[1] - goalpos[1]) ** 2))
         # reward = max(self.prev_dist_to_goal - dist_to_goal, 0)
@@ -94,12 +95,17 @@ class SimpleDrivingEnv(gym.Env):
         self.prev_dist_to_goal = dist_to_goal
         
         # Done by reaching goal
-        if dist_to_goal < 1.5 and not self.reached_goal:
-            print("reached goal________________________________________________________________")
-            self.done = True
-            self.reached_goal = True
+        if dist_to_goal < 0.5 and not self.reached_goal:
+            # print("Current goal -> Total goals:", self.current_goal, "->", len(self.goal_objects)-1)
             reward += 50 # if it's reached goal add reward 50
             
+            if self.current_goal == len(self.goal_objects)-1:
+                self.done = True
+                self.reached_goal = True
+                print("reached last goal____________Current goal -> Total goals:", self.current_goal, "->", len(self.goal_objects)-1)
+            else: 
+                self.goal_objects[self.current_goal].delete()
+                self.current_goal += 1
         ob = car_ob
         
         # # Convert list positions to numpy arrays
@@ -139,34 +145,65 @@ class SimpleDrivingEnv(gym.Env):
         self._p.resetSimulation()
         self._p.setTimeStep(self._timeStep)
         self._p.setGravity(0, 0, -10)
+        
+        self.walls = [] # list of walls 
+        self.maze = None # list of walls 
+        self.current_goal = 0 # current goal object
+        self.path_planner = None 
+        self.start_node = None # start node
+        self.end_node = None # end node
+        self.shortest_path = [] # shortest path
+        self.goal_objects = [] # goal objects
         # Reload the plane and car
         Plane(self._p)
+
+        listofNodes = []
+        self.path_planner = pathplanning.PathPlanning()
         
-        self.listPos.clear()
         # Visual maze element in the environment
         maze = MazeClass("_all-mazes\maze25x25s3.txt")
         self.maze = maze.readMazeFile()
         max_x = max([coord[0] for coord in self.maze.keys()]) + 1
         max_y = max([coord[1] for coord in self.maze.keys()]) + 1
-        # print("Maze X:", max_x)
-        # print("Maze Y:", max_y)        
         for y in range(max_y):
             for x in range(max_x):
+                position = (x-(max_x/2), y-(max_y/2))
+                node = pathplanning.Node(x=int(position[0]), y=int(position[1]))
                 if self.maze[(x, y)] == maze.WALL:
-                    wall = (x-(max_x/2), y-(max_y/2))
-                    self.walls.append(Wall(self._p, wall))
+                    self.walls.append(Wall(self._p, position))
                     
-                if self.maze[(x,y)] == maze.START:
+                elif self.maze[(x,y)] == maze.START:
                     start = (x-(max_x/2), y-(max_y/2))
-                    self.car = Car(self._p, start)
+                    self.car = Car(self._p, position)
+                    self.start_node = node  # Define your start node
+                    # listofNodes.append(node)
                 
-                if self.maze[(x,y)] == maze.EXIT:
+                elif self.maze[(x,y)] == maze.EXIT:
                     # Visual element of the goal
-                    self.goal = (x-(max_x/2), y-(max_y/2))
+                    self.goal = position
                     self.goal_object = Goal(self._p, self.goal)
+                    self.end_node = node  # Define your end node
+                    listofNodes.append(node)
+                    
+                elif self.maze[(x,y)] == maze.EMPTY:
+                    listofNodes.append(node)
 
+
+        self.path_planner.initial_path_planning(listofNodes)
+        shortest_path = self.path_planner.execution(self.start_node, self.end_node)
+
+        # Print listofNodes
+        # print("List of Nodes:")
+        # for node in listofNodes:
+        #     print("Node at position ({}, {})".format(node.X, node.Y))
+
+        # Print shortest_path
+        # print("Shortest Path:")
+        for node in shortest_path:
+            # print("Node at position ({}, {})".format(node.X, node.Y))
+            self.goal_objects.append(Goal(self._p, (node.X, node.Y)))
+                
         self._envStepCounter = 0
-
         self.done = False
         self.reached_goal = False
 
@@ -177,7 +214,6 @@ class SimpleDrivingEnv(gym.Env):
                                            (carpos[1] - self.goal[1]) ** 2))
         
         car_ob = self.getExtendedObservation()
-        self.listPos.append(car_ob)
         # Concatenate car's extended observation with the closest obstacle position
         ob = car_ob
 
@@ -241,7 +277,7 @@ class SimpleDrivingEnv(gym.Env):
     def getExtendedObservation(self):
         # self._observation = []  #self._racecar.getObservation()
         carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
-        goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_object.goal)
+        goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_objects[self.current_goal].goal)
         invCarPos, invCarOrn = self._p.invertTransform(carpos, carorn)
         goalPosInCar, goalOrnInCar = self._p.multiplyTransforms(invCarPos, invCarOrn, goalpos, goalorn)
 
