@@ -33,7 +33,7 @@ TRAIN = True  # if set to false will skip training, load the last saved model an
 USE_PREVIOUS_MODEL = True # if set to false will not use the previous model but will use the current model
 
 # Hyper parameters that will be used in the DQN algorithm
-EPISODES = 10000                 # number of episodes to run the training for
+EPISODES = 5000                 # number of episodes to run the training for
 LEARNING_RATE = 0.00025         # the learning rate for optimising the neural network weights
 MEM_SIZE = 50000                # maximum size of the replay memory - will start overwritting values once this is exceed
 REPLAY_START_SIZE = 10000       # The amount of samples to fill the replay memory with before we start learning
@@ -273,7 +273,16 @@ def train_model():
     total_time = current_time - start_time
     print(f'Training took: {total_time/60} minutes!')
     plt.plot(episode_history, episode_reward_history)
+    plt.xlabel('Episode')
+    plt.ylabel('Reward')
+    plt.title('Episode Reward History')
+
+    # Save the plot as an image file
+    plt.savefig('episode_reward_plot.png')
+
+    # Displaying the plot is optional
     plt.show()
+
 
 def test_model(model_file):
     env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
@@ -317,5 +326,5 @@ if __name__ == "__main__":
     else:
         test_model(model_file)
 
-    load_and_render_simulator()
+    # load_and_render_simulator()
 
