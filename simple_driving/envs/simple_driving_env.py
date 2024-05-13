@@ -73,7 +73,6 @@ class SimpleDrivingEnv(gym.Env):
           if self._renders:
             time.sleep(self._timeStep)
           
-          
           # Simulate LiDAR
           lidar_data = self.simulate_lidar()
           #print("Lidar data:", lidar_data)
@@ -334,10 +333,11 @@ class SimpleDrivingEnv(gym.Env):
         for i, result in enumerate(results):
             hit_distance = result[2] * ray_length
             hit_distances.append(hit_distance)
-            color = [1, 0, 0] if hit_distance < ray_length else [0, 1, 0]
-            self._p.addUserDebugLine(ray_from, rays_to[i], color, lifeTime=0.1)
+            #color = [1, 0, 0] if hit_distance < ray_length else [0, 1, 0]
+            #self._p.addUserDebugLine(ray_from, rays_to[i], color, lifeTime=0.1)
 
         return hit_distances
+    
     def _termination(self):
         return self._envStepCounter > 10000
 
