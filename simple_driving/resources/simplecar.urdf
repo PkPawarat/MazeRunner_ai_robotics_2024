@@ -176,4 +176,27 @@
         <axis xyz="0 1 0"/>
         <origin xyz="-0.2 -0.175 0"/>
     </joint>
+
+    <link name="lidar_link">
+        <inertial>
+            <mass value="0.1"/>
+            <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
+        </inertial>
+        <visual>
+            <geometry>
+                <box size="0.1 0.1 0.1"/>
+            </geometry>
+            <material name="black"/>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="0.1 0.1 0.1"/>
+            </geometry>
+        </collision>
+    </link>
+    <joint name="base_to_lidar" type="fixed">
+        <parent link="base_link"/>
+        <child link="lidar_link"/>
+        <origin xyz="0 0 0.1" rpy="0 0 0"/>
+    </joint>
 </robot>

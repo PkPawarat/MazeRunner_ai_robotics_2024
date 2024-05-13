@@ -75,12 +75,16 @@ class SimpleDrivingEnv(gym.Env):
           self._p.stepSimulation()
           if self._renders:
             time.sleep(self._timeStep)
-
+          
+          
+          # Simulate LiDAR
+          lidar_data = self.simulate_lidar()
+          #print("Lidar data:", lidar_data)
           carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
           goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_objects[self.current_goal].goal)
           
-          car_ob = self.getExtendedObservation()
-
+          car_ob = self.getExtendedObservation() + lidar_data  # Append LiDAR data to the car's observation
+          
           if self._termination():
             self.done = True
             reward = -50
@@ -161,7 +165,7 @@ class SimpleDrivingEnv(gym.Env):
         self.path_planner = pathplanning.PathPlanning()
         
         # Visual maze element in the environment
-        maze = MazeClass("_all-mazes\maze25x25s3.txt")
+        maze = MazeClass("./_all-mazes/maze25x25s2.txt")
         self.maze = maze.readMazeFile()
         max_x = max([coord[0] for coord in self.maze.keys()]) + 1
         max_y = max([coord[1] for coord in self.maze.keys()]) + 1
@@ -335,9 +339,41 @@ class SimpleDrivingEnv(gym.Env):
                         return closest_wall, closest_wall_pos, reward
 
         return closest_wall, closest_wall_pos, reward
-                
 
+    def simulate_lidar(self, num_rays=360, ray_length=10):
+        lidar_link_index = self._p.getNumJoints(self.car.car) - 1
+        lidar_pos, lidar_orn = self._p.getLinkState(self.car.car, lidar_link_index)[4:6]
+        
+        rays_from = []
+        rays_to = []
+        rotation_matrix = self._p.getMatrixFromQuaternion(lidar_orn)
+        forward_vector = [rotation_matrix[0], rotation_matrix[3], rotation_matrix[6]]
+        up_vector = [rotation_matrix[2], rotation_matrix[5], rotation_matrix[8]]
+        right_vector = np.cross(forward_vector, up_vector)
+        
+        hit_distances = []
+        for i in range(num_rays):
+            angle = 2 * np.pi * i / num_rays
+            direction = [
+                forward_vector[0] * np.cos(angle) + right_vector[0] * np.sin(angle),
+                forward_vector[1] * np.cos(angle) + right_vector[1] * np.sin(angle),
+                forward_vector[2] * np.cos(angle) + right_vector[2] * np.sin(angle)
+            ]
+            ray_from = lidar_pos
+            ray_to = [lidar_pos[0] + ray_length * direction[0], 
+                    lidar_pos[1] + ray_length * direction[1], 
+                    lidar_pos[2] + ray_length * direction[2]]
+            rays_from.append(ray_from)
+            rays_to.append(ray_to)
 
+        results = self._p.rayTestBatch(rays_from, rays_to)
+        for i, result in enumerate(results):
+            hit_distance = result[2] * ray_length
+            hit_distances.append(hit_distance)
+            color = [1, 0, 0] if hit_distance < ray_length else [0, 1, 0]
+            self._p.addUserDebugLine(ray_from, rays_to[i], color, lifeTime=0.1)
+
+        return hit_distances
     def _termination(self):
         return self._envStepCounter > 10000
 
