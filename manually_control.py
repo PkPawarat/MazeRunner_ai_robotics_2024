@@ -292,21 +292,74 @@ print("Start loading training policy")
 agent.policy_network.load_state_dict(torch.load(model_file))
 print("finished loading training policy")
 
-for i in range(10):
-    state = env.reset()[0]
-    agent.policy_network.eval()
+state = env.reset()[0]
+agent.policy_network.eval()
+import msvcrt
+import time
 
+import msvcrt
+
+def get_action():
     while True:
-        with torch.no_grad():
-            q_values = agent.policy_network(torch.tensor(state, dtype=torch.float32))
-        action = torch.argmax(q_values).item() # select action with highest predicted q-value
+        if msvcrt.kbhit():
+            key = msvcrt.getch().decode('utf-8').lower()
+            if key in ['w', 'a', 's', 'd', 'z', 'c', 'x', 'q']:
+                if key == 'w':
+                    return 7  # Forward
+                elif key == 'a':
+                    return 8  # Forward-left
+                elif key == 's':
+                    return 1  # Reverse
+                elif key == 'd':
+                    return 6  # Forward-right
+                elif key == 'z':
+                    return 0  # Reverse-left
+                elif key == 'c':
+                    return 2  # Reverse-right
+                elif key == 'x':
+                    return 4  # Reverse-right
+                elif key == 'q':
+                    return 'q'  # Reverse-right
+listaction = [
+    8,8,8,8,8,8,8,7,7,7,7,7,7,7,7,7,7,6,6,6,6,8,6,8,6,6,6,8,8,8,6,8,8,6,6,6,7,7,8,8,7,7,8,7,7,7,6,6,7,7,8,8,8,8,1,1,1,1,1,1,1,4,4,2,2,0,0,0,0,0,0,0,8,8,8,8,8,8,8,8,8,8,8,6,8,7,7,7,7,7,7,7,7,7,6,7,7,7,8,7,7,7,7,7,7,7,7,7,6,6,6,8,8,4,4,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,7,7,7,7,7,7,7,7,7,7,8,6,8,6,8,6,8,8,8,7,7,7,6,7,7,7,6,7,7,7,7,7,7,7,8,6,7,7,7,7,7,7,6,10
+]
+
+while True:
+    print("""Action Space:
+                    w: Forward
+                    a: Steer-left
+                    s: Reverse
+                    d: Steer-right
+                    Press 'q' to quit""")
+    action = get_action()
+    
+    if action == 10:
+            break
+        
+    if action is not None:
+        listaction.append(action)
         state_, reward, done, info, _ = env.step(action)
         state = state_
         env.render()
-        # time.sleep(1/30)
-        if done:
-            print("Training is finished")
-            break
+            
+    # action = 0
+    # for i in listaction:
+    #     action = i
+    #     if action == 10:
+    #         break
+        
+    #     if action is not None:
+    #         listaction.append(action)
+    #         state_, reward, done, info, _ = env.step(action)
+    #         state = state_
+    #         env.render()
+            
+    if action == 10: 
+        break
+        
+for action in listaction:
+    print(action)
+
 
 
 time.sleep(5)

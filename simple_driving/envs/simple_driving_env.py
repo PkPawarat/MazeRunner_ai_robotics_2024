@@ -144,7 +144,7 @@ class SimpleDrivingEnv(gym.Env):
         
         self.listPos.clear()
         # Visual maze element in the environment
-        maze = MazeClass("_all-mazes\maze25x25s2.txt")
+        maze = MazeClass("_all-mazes\maze25x25s3.txt")
         self.maze = maze.readMazeFile()
         max_x = max([coord[0] for coord in self.maze.keys()]) + 1
         max_y = max([coord[1] for coord in self.maze.keys()]) + 1

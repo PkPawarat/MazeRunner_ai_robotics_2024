@@ -16,8 +16,8 @@ class Car:
         # Joint speed
         self.joint_speed = 0
         # Drag constants
-        self.c_rolling = 0.2
-        self.c_drag = 0.01
+        self.c_rolling = 0
+        self.c_drag = 0
         # Throttle constant increases "speed" of the car
         self.c_throttle = 100
 
@@ -36,7 +36,8 @@ class Car:
         self.client.setJointMotorControlArray(self.car, self.steering_joints,
                                     controlMode=p.POSITION_CONTROL,
                                     targetPositions=[steering_angle] * 2)
-
+        if throttle < 0 and self.joint_speed > 0: self.joint_speed = -self.joint_speed
+        if throttle > 0 and self.joint_speed < 0: self.joint_speed = -self.joint_speed
         # Calculate drag / mechanical resistance ourselves
         # Using velocity control, as torque control requires precise models
         friction = -self.joint_speed * (self.joint_speed * self.c_drag +
@@ -45,7 +46,7 @@ class Car:
         # Each time step is 1/240 of a second
         self.joint_speed = min(self.joint_speed + 0.01 * acceleration, 10.0)
         # if self.joint_speed < 0:
-            # self.joint_speed = 0
+        #     self.joint_speed = 0
 
         # Set the velocity of the wheel joints directly
         self.client.setJointMotorControlArray(
