@@ -251,7 +251,6 @@ def train_model():
             # only start learning once replay memory reaches REPLAY_START_SIZE
             if agent.memory.mem_count > REPLAY_START_SIZE:
                 agent.learn()
-            agent.learn()
             
             state = state_
             episode_batch_score += reward
