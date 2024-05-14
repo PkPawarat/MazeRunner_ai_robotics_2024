@@ -1,5 +1,6 @@
 import pybullet as p
 import os
+import math
 
 
 class Goal:
@@ -12,3 +13,12 @@ class Goal:
     def delete(self):
         self.client.removeBody(self.goal)
         self.goal = None  # Set to None to indicate the goal has been deleted
+        
+    def get_observation(self):
+        # Get the position and orientation of the car in the simulation
+        pos, ang = self.client.getBasePositionAndOrientation(self.goal)
+        pos = pos[:2]
+        # Concatenate position
+        observation = pos
+
+        return observation

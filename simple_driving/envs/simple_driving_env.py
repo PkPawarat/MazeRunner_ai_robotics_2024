@@ -27,9 +27,13 @@ class SimpleDrivingEnv(gym.Env):
             self.action_space = gym.spaces.box.Box(
                 low=np.array([-1, -.6], dtype=np.float32),
                 high=np.array([1, .6], dtype=np.float32))
-        self.observation_space = gym.spaces.box.Box(
-            low=np.array([-80, -80], dtype=np.float32),
-            high=np.array([80, 80], dtype=np.float32))
+        # self.observation_space = gym.spaces.box.Box(
+        #     low=np.array([-80, -80], dtype=np.float32),
+        #     high=np.array([80, 80], dtype=np.float32))
+        self.observation_space = gym.spaces.Box(
+            low=np.array([-80, -80, -80, -80, -80, -80, -80, -80, -80, -80, 0], dtype=np.float32),
+            high=np.array([80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 200], dtype=np.float32))
+
         self.np_random, _ = gym.utils.seeding.np_random()
 
         if renders:
@@ -75,19 +79,19 @@ class SimpleDrivingEnv(gym.Env):
           self._p.stepSimulation()
           if self._renders:
             time.sleep(self._timeStep)
-          
-          
+
           # Simulate LiDAR
-        #   lidar_data = self.simulate_lidar()
-          #print("Lidar data:", lidar_data)
+          # lidar_data = self.simulate_lidar()
+          # print("Lidar data:", lidar_data)
           carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
           goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_objects[self.current_goal].goal)
           
-          car_ob = self.getExtendedObservation()# + lidar_data  # Append LiDAR data to the car's observation
+          # car_ob = self.getExtendedObservation()# + lidar_data  # Append LiDAR data to the car's observation
           
           if self._termination():
             self.done = True
             reward = -50
+            # print("self._termination when Current goal -> Total goals:", self.current_goal, "->", len(self.goal_objects)-1)
             break
           self._envStepCounter += 1
 
@@ -99,8 +103,7 @@ class SimpleDrivingEnv(gym.Env):
         self.prev_dist_to_goal = dist_to_goal
         
         # Done by reaching goal
-        if dist_to_goal < 1 and not self.reached_goal:
-            # print("Current goal -> Total goals:", self.current_goal, "->", len(self.goal_objects)-1)
+        if dist_to_goal < 1.2 and not self.reached_goal:
             reward += 50 # if it's reached goal add reward 50
             
             if self.current_goal == len(self.goal_objects)-1:
@@ -111,8 +114,18 @@ class SimpleDrivingEnv(gym.Env):
             else: 
                 self.goal_objects[self.current_goal].delete()
                 self.current_goal += 1
-        ob = car_ob
-        
+                self.prev_dist_to_goal = math.sqrt(((carpos[0] - self.goal_objects[self.current_goal].base[0]) ** 2 + (carpos[1] - self.goal_objects[self.current_goal].base[1]) ** 2))
+
+        # Get observation to return
+        carpos_get_observation = self.car.get_observation()
+        # get the closest wall to the car position
+        closestwall, closestwallpos, rewardWall = self.closestWall()
+        if rewardWall < 0:
+            reward += rewardWall
+
+        # Concatenate car's extended observation with current goal position
+        ob = (carpos_get_observation + self.goal_objects[self.current_goal].get_observation() + closestwall + (self.current_goal,))
+
         # # Convert list positions to numpy arrays
         # if self._envStepCounter % 1000 == 0:
         #     ob_np = np.array(ob)
@@ -132,13 +145,6 @@ class SimpleDrivingEnv(gym.Env):
         #         self.done = True
             
         #     self.listPos.append(car_ob)
-            
-        
-        # closestwall, closestwallpos, rewardWall = self.closestWall()
-        # if rewardWall < 0:
-        #     print("hit wall")
-        #     reward = -500
-        #     self.done = True
         
         return ob, reward, self.done, dict()
 
@@ -215,12 +221,14 @@ class SimpleDrivingEnv(gym.Env):
         # Get observation to return
         carpos = self.car.get_observation()
 
-        self.prev_dist_to_goal = math.sqrt(((carpos[0] - self.goal[0]) ** 2 +
-                                           (carpos[1] - self.goal[1]) ** 2))
+        self.prev_dist_to_goal = math.sqrt(((carpos[0] - self.goal_objects[self.current_goal].base[0]) ** 2 +
+                                           (carpos[1] - self.goal_objects[self.current_goal].base[1]) ** 2))
         
-        car_ob = self.getExtendedObservation()
-        # Concatenate car's extended observation with the closest obstacle position
-        ob = car_ob
+        # get the closest wall to the car position
+        closestwall, closestwallpos, rewardWall = self.closestWall()
+        # Concatenate car's extended observation with current goal position
+        ob = (carpos + self.goal_objects[self.current_goal].get_observation() + closestwall + (self.current_goal,))
+
 
         return ob
 
@@ -305,7 +313,10 @@ class SimpleDrivingEnv(gym.Env):
         """
 
         carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
-        invCarPos, invCarOrn = self._p.invertTransform(carpos, carorn)
+
+        # Calculate car orientation in Euler angles
+        car_euler = self._p.getEulerFromQuaternion(carorn)
+        car_heading = car_euler[2]
 
         # Define car's dimensions for calculating the points
         car_length = 0.6  # Length of the car
@@ -313,33 +324,39 @@ class SimpleDrivingEnv(gym.Env):
 
         # Define four points on the car representing its corners
         car_points = [
-            ((car_length / 2)+carpos[0], (car_width / 2)+carpos[1]),   # Front right
-            ((car_length / 2)+carpos[0], -(car_width / 2)+carpos[1]),  # Front left
-            (-(car_length / 2)+carpos[0], (car_width / 2)+carpos[1]),  # Back right
-            (-(car_length / 2)+carpos[0], -(car_width / 2)+carpos[1])  # Back left
+            (carpos[0] + (car_length / 2) * math.cos(car_heading) + (car_width / 2) * math.sin(car_heading),
+             carpos[1] + (car_length / 2) * math.sin(car_heading) - (car_width / 2) * math.cos(car_heading)),  # Front right
+            (carpos[0] + (car_length / 2) * math.cos(car_heading) - (car_width / 2) * math.sin(car_heading),
+             carpos[1] + (car_length / 2) * math.sin(car_heading) + (car_width / 2) * math.cos(car_heading)),  # Front left
+            (carpos[0] - (car_length / 2) * math.cos(car_heading) + (car_width / 2) * math.sin(car_heading),
+             carpos[1] - (car_length / 2) * math.sin(car_heading) - (car_width / 2) * math.cos(car_heading)),  # Back right
+            (carpos[0] - (car_length / 2) * math.cos(car_heading) - (car_width / 2) * math.sin(car_heading),
+             carpos[1] - (car_length / 2) * math.sin(car_heading) + (car_width / 2) * math.cos(car_heading))   # Back left
         ]
 
-        closest_wall_pos = float('inf')  # Initialize minimum distance to positive infinity
-        closest_wall = None  # Initialize closest wall to None
+        closest_wall_distance = float('inf')  # Initialize minimum distance to positive infinity
+        closest_wall_pos = None  # Initialize closest wall to None
         reward = 0
 
         for wall in self.walls:
             wall_pos, _ = self._p.getBasePositionAndOrientation(wall.wall)
 
-            # Check each car point against the wall
             for point in car_points:
-                # Calculate distance between the point and the wall
+                # Calculate distance between each car point and the wall
                 distance = math.sqrt((point[0] - wall_pos[0]) ** 2 + (point[1] - wall_pos[1]) ** 2)
 
-                if distance < closest_wall_pos:
-                    closest_wall_pos = distance
-                    closest_wall = wall
+                if distance < closest_wall_distance:
+                    closest_wall_distance = distance
+                    closest_wall_pos = wall_pos[:2]
 
-                    if closest_wall_pos <= 0.6:
-                        reward = -50
-                        return closest_wall, closest_wall_pos, reward
+                    if closest_wall_distance <= 0.48:  # Check if car is too close to the wall
+                        # print("It's hitting the fucking wall!!!!!")
+                        reward = -10    # punish if it hitting the wall
+                        return closest_wall_pos, closest_wall_distance, reward
 
-        return closest_wall, closest_wall_pos, reward
+        return closest_wall_pos, closest_wall_distance, reward
+
+
 
     def simulate_lidar(self, num_rays=360, ray_length=10):
         lidar_link_index = self._p.getNumJoints(self.car.car) - 1
@@ -375,6 +392,8 @@ class SimpleDrivingEnv(gym.Env):
             self._p.addUserDebugLine(ray_from, rays_to[i], color, lifeTime=0.1)
 
         return hit_distances
+    
+    
     def _termination(self):
         return self._envStepCounter > 10000
 

@@ -287,13 +287,13 @@ if TRAIN:
 ###########################################################################################
 # Test trained policy for 10 time
 env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
-agent = DQN_Solver(env)
+# agent = DQN_Solver(env)
 print("Start loading training policy")
-agent.policy_network.load_state_dict(torch.load(model_file))
+# agent.policy_network.load_state_dict(torch.load(model_file))
 print("finished loading training policy")
 
 state = env.reset()[0]
-agent.policy_network.eval()
+# agent.policy_network.eval()
 import msvcrt
 import time
 

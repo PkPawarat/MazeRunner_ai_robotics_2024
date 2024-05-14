@@ -42,17 +42,18 @@ class Car:
         self.client.setJointMotorControlArray(self.car, self.steering_joints,
                                     controlMode=p.POSITION_CONTROL,
                                     targetPositions=[steering_angle] * 2)
-        if throttle < 0 and self.joint_speed > 0: self.joint_speed = -self.joint_speed
-        if throttle > 0 and self.joint_speed < 0: self.joint_speed = -self.joint_speed
+        if throttle < 0 and self.joint_speed > 0: self.joint_speed = 0
+        if throttle > 0 and self.joint_speed < 0: self.joint_speed = 0
         # Calculate drag / mechanical resistance ourselves
         # Using velocity control, as torque control requires precise models
         friction = -self.joint_speed * (self.joint_speed * self.c_drag +
                                         self.c_rolling)
         acceleration = self.c_throttle * throttle + friction
         # Each time step is 1/240 of a second
-        self.joint_speed = min(self.joint_speed + 0.01 * acceleration, 5.0)    # max speed value should be just 5 
-        # if self.joint_speed < 0:
-        #     self.joint_speed = 0
+        self.joint_speed = min(self.joint_speed + 0.01 * acceleration, 10.0)    # max speed value should be just 510
+        
+        if throttle == 0 and steering_angle == 0:
+            self.joint_speed = 0
 
         # Set the velocity of the wheel joints directly
         self.client.setJointMotorControlArray(
