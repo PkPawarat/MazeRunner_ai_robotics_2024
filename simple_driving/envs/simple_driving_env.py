@@ -27,9 +27,6 @@ class SimpleDrivingEnv(gym.Env):
             self.action_space = gym.spaces.box.Box(
                 low=np.array([-1, -.6], dtype=np.float32),
                 high=np.array([1, .6], dtype=np.float32))
-        # self.observation_space = gym.spaces.box.Box(
-        #     low=np.array([-80, -80], dtype=np.float32),
-        #     high=np.array([80, 80], dtype=np.float32))
         self.observation_space = gym.spaces.Box(
             low=np.array([-80, -80, -80, -80, -80, -80, -80, -80, -80, -80, 0], dtype=np.float32),
             high=np.array([80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 200], dtype=np.float32))
@@ -63,11 +60,21 @@ class SimpleDrivingEnv(gym.Env):
         self.start_node = None # start node
         self.end_node = None # end node
         self.shortest_path = [] # shortest path
-        # self.reset()
         self._envStepCounter = 0
+
+        # New reward design parameters
+        self.goal_reward = 50  # Reward for reaching the goal
+        self.time_penalty = -0.1  # Penalty for each time step
+        self.collision_penalty = -10  # Penalty for collisions
+        self.distance_reward = 0.05  # Reward for covering distance towards the goal
+        self.smooth_driving_reward = 0.01  # Reward for smooth driving behavior
+        self.obstacle_avoidance_reward = 1  # Reward for avoiding obstacles
+        self.max_distance_reward = 2  # Maximum reward for covering distance
+
 
     def step(self, action):
         # Feed action to the car and get observation of car's state
+        reward = 0
         if (self._isDiscrete):
             fwd = [-1, -1, -1, 0, 0, 0, 1, 1, 1]
             steerings = [-0.6, 0, 0.6, -0.6, 0, 0.6, -0.6, 0, 0.6]
@@ -76,76 +83,46 @@ class SimpleDrivingEnv(gym.Env):
             action = [throttle, steering_angle]
         self.car.apply_action(action)
         for i in range(self._actionRepeat):
-          self._p.stepSimulation()
-          if self._renders:
-            time.sleep(self._timeStep)
+            self._p.stepSimulation()
+            if self._renders:
+                time.sleep(self._timeStep)
 
-          # Simulate LiDAR
-          # lidar_data = self.simulate_lidar()
-          # print("Lidar data:", lidar_data)
-          carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
-          goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_objects[self.current_goal].goal)
-          
-          # car_ob = self.getExtendedObservation()# + lidar_data  # Append LiDAR data to the car's observation
-          
-          if self._termination():
-            self.done = True
-            reward = -50
-            # print("self._termination when Current goal -> Total goals:", self.current_goal, "->", len(self.goal_objects)-1)
-            break
-          self._envStepCounter += 1
-
-        # Compute reward as L2 change in distance to goal
-        dist_to_goal = math.sqrt(((carpos[0] - goalpos[0]) ** 2 +
-                                  (carpos[1] - goalpos[1]) ** 2))
-        # reward = max(self.prev_dist_to_goal - dist_to_goal, 0)
-        reward = -dist_to_goal
-        self.prev_dist_to_goal = dist_to_goal
+            if self._termination():
+                self.done = True
+                reward = -50
+                break
+            self._envStepCounter += 1
         
-        # Done by reaching goal
+        closest_wall_pos, closest_wall_distance, rewardWall = self.closestWall()
+        carpos = self.car.get_observation()
+        
+        # Compute reward
+        reward += self.time_penalty
+        dist_to_goal = self.get_dist_to_goal(carpos, self.get_goal_observation())
+        reward += self.distance_reward * (self.prev_dist_to_goal - dist_to_goal)
+        reward += self.smooth_driving_reward if action in [3, 5, 4] else 0  # Smooth driving reward
+        reward += self.obstacle_avoidance_reward if rewardWall == 0 else 0  # Obstacle avoidance reward
+        reward += self.collision_penalty if rewardWall < 0 else 0  # Collision penalty
+
+        # Update distance to goal
+        self.prev_dist_to_goal = dist_to_goal
+
+        # Check for goal reached
         if dist_to_goal < 1.2 and not self.reached_goal:
-            reward += 50 # if it's reached goal add reward 50
-            
-            if self.current_goal == len(self.goal_objects)-1:
+            reward += self.goal_reward
+            if self.current_goal == len(self.goal_objects) - 1:
                 self.done = True
                 self.reached_goal = True
+                reward += 500  # Additional reward for reaching last goal
                 print("reached last goal____________Current goal -> Total goals:", self.current_goal, "->", len(self.goal_objects)-1)
-                reward += 500 # if it's reached goal add reward 50
             else: 
                 self.goal_objects[self.current_goal].delete()
                 self.current_goal += 1
-                self.prev_dist_to_goal = math.sqrt(((carpos[0] - self.goal_objects[self.current_goal].base[0]) ** 2 + (carpos[1] - self.goal_objects[self.current_goal].base[1]) ** 2))
-
-        # Get observation to return
-        carpos_get_observation = self.car.get_observation()
-        # get the closest wall to the car position
-        closestwall, closestwallpos, rewardWall = self.closestWall()
-        if rewardWall < 0:
-            reward += rewardWall
-
-        # Concatenate car's extended observation with current goal position
-        ob = (carpos_get_observation + self.goal_objects[self.current_goal].get_observation() + closestwall + (self.current_goal,))
-
-        # # Convert list positions to numpy arrays
-        # if self._envStepCounter % 1000 == 0:
-        #     ob_np = np.array(ob)
-        #     listPos_np = np.array(self.listPos)
-
-        #     # Calculate distances
-        #     distances = np.linalg.norm(listPos_np - ob_np, axis=1)
-
-        #     # Check if any position in listPos is within the range of 0.5 units close to car_ob
-        #     is_close = any(distances < 0.05)
-            
-        #     # # Debugging: Print out the positions in listPos for easier debugging
-        #     # print("Positions in listPos:", listPos_np)
-
-        #     if is_close:
-        #         reward += -50
-        #         self.done = True
-            
-        #     self.listPos.append(car_ob)
+                self.prev_dist_to_goal = self.get_dist_to_goal(carpos, self.get_goal_observation())
         
+        # Get observation
+        ob = self.get_observation(carpos, self.get_goal_observation(), closest_wall_pos)
+
         return ob, reward, self.done, dict()
 
     def seed(self, seed=None):
@@ -172,7 +149,7 @@ class SimpleDrivingEnv(gym.Env):
         self.path_planner = pathplanning.PathPlanning()
         
         # Visual maze element in the environment
-        maze = MazeClass("./_all-mazes/maze25x25s3.txt")
+        maze = MazeClass("./_all-mazes/maze25x25s1.txt")
         self.maze = maze.readMazeFile()
         max_x = max([coord[0] for coord in self.maze.keys()]) + 1
         max_y = max([coord[1] for coord in self.maze.keys()]) + 1
@@ -199,36 +176,25 @@ class SimpleDrivingEnv(gym.Env):
                 elif self.maze[(x,y)] == maze.EMPTY:
                     listofNodes.append(node)
 
-
         self.path_planner.initial_path_planning(listofNodes)
         shortest_path = self.path_planner.execution(self.start_node, self.end_node)
 
-        # Print listofNodes
-        # print("List of Nodes:")
-        # for node in listofNodes:
-        #     print("Node at position ({}, {})".format(node.X, node.Y))
-
-        # Print shortest_path
-        # print("Shortest Path:")
+        # Plot shortest_path
+        carpos = self.car.get_observation()
         for node in shortest_path:
-            # print("Node at position ({}, {})".format(node.X, node.Y))
-            self.goal_objects.append(Goal(self._p, (node.X, node.Y)))
+            dist = self.get_dist_to_goal(carpos, (node.X, node.Y))
+            if dist <= 2:
+                pass
+            else:
+                self.goal_objects.append(Goal(self._p, (node.X, node.Y)))
                 
         self._envStepCounter = 0
         self.done = False
         self.reached_goal = False
 
         # Get observation to return
-        carpos = self.car.get_observation()
-
-        self.prev_dist_to_goal = math.sqrt(((carpos[0] - self.goal_objects[self.current_goal].base[0]) ** 2 +
-                                           (carpos[1] - self.goal_objects[self.current_goal].base[1]) ** 2))
-        
-        # get the closest wall to the car position
-        closestwall, closestwallpos, rewardWall = self.closestWall()
-        # Concatenate car's extended observation with current goal position
-        ob = (carpos + self.goal_objects[self.current_goal].get_observation() + closestwall + (self.current_goal,))
-
+        self.prev_dist_to_goal = self.get_dist_to_goal(carpos, self.get_goal_observation())
+        ob = self.get_observation(carpos, self.get_goal_observation())
 
         return ob
 
@@ -267,9 +233,9 @@ class SimpleDrivingEnv(gym.Env):
             car_id = self.car.get_ids()
             base_pos, orn = self._p.getBasePositionAndOrientation(car_id)
             view_matrix = self._p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=base_pos,
-                                                                    distance=20.0,
-                                                                    yaw=40.0,
-                                                                    pitch=-35,
+                                                                    distance=40.0,
+                                                                    yaw=90.0,
+                                                                    pitch=-95,
                                                                     roll=0,
                                                                     upAxisIndex=2)
             proj_matrix = self._p.computeProjectionMatrixFOV(fov=60,
@@ -297,6 +263,20 @@ class SimpleDrivingEnv(gym.Env):
         observation = [goalPosInCar[0], goalPosInCar[1]]
         # observation = [carpos[0], carpos[1]]
         return observation
+    
+    def get_observation(self, carpos, goal_pos, closest_wall_pos=None):
+        if closest_wall_pos is None: 
+            closest_wall_pos, _, _ = self.closestWall()
+        
+        return np.concatenate((carpos, goal_pos, closest_wall_pos, [self.current_goal]))
+    
+    def get_goal_observation(self):
+        return self.goal_objects[self.current_goal].get_observation()
+
+
+    def get_dist_to_goal(self, carpos, goal_pos):
+        return math.sqrt(((carpos[0] - goal_pos[0]) ** 2 + (carpos[1] - goal_pos[1]) ** 2))
+
     
     def closestWall(self):
         """

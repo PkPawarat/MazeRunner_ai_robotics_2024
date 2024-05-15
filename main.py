@@ -64,9 +64,9 @@ class Network(torch.nn.Module):
         super().__init__()
         self.input_shape = env.observation_space.shape
         self.action_space = env.action_space.n
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        # self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cpu')
         print("self.device => ", self.device)
-        # self.device = torch.device('cpu')
         # self.device = torch.device('cuda:0')
         self.to(self.device)
         
@@ -244,6 +244,11 @@ def train_model():
             action = agent.choose_action(state)
             state_, reward, done, _, info = env.step(action)
             
+            # ## assign zero to the current_goal from state_ because it's conflicting with test model
+            # # Access current_goal to the episode_current_goal
+            episode_current_goal = state_[len(state_)-1]
+            state_[len(state_)-1] = 0
+            
             ####### add sampled experience to replay buffer ##########
             agent.memory.add(state, action, reward, state_, done)
             ##########################################################
@@ -256,9 +261,6 @@ def train_model():
             episode_batch_score += reward
             episode_reward += reward
             
-            # Access current_goal and append it to the list
-            episode_current_goal = state_[len(state_)-1]
-
             if done:
                 break
 
@@ -280,23 +282,24 @@ def train_model():
     current_time = time.time()
     total_time = current_time - start_time
     print(f'Training took: {total_time/60} minutes!')
+    plt.figure()  
     plt.plot(episode_history, episode_reward_history)
     plt.xlabel('Episode')
     plt.ylabel('Reward')
     plt.title('Episode Reward History')
     # Save the plot as an image file
-    plt.savefig('episode_reward_plot.png')
+    plt.savefig(episode_reach_goal_plot)
 
-
+    plt.figure()  
     plt.plot(episode_history, current_goal_history)
     plt.xlabel('Episode')
     plt.ylabel('Reach Goal')
     plt.title('Episode Reach Goal History')
     # Save the plot as an image file
-    plt.savefig('episode_reach_goal_plot.png')
+    plt.savefig(episode_reward_plot)
 
     # Displaying the plot is optional
-    plt.show()
+    # plt.show()
 
 def test_model(model_file):
     env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
@@ -331,9 +334,12 @@ def load_and_render_simulator():
 
 ############################################################################################
 ## if there is training data available. Check if the model file exists
-previous_model_file = "policy_network_run_around_maze_v4_PK.pkl"
-model_file = "policy_network_run_around_maze_v4_PK.pkl"
-
+version = 6
+usersName = "PK"
+previous_model_file = "policy_network_run_around_maze_v5_PK.pkl"
+model_file = "policy_network_run_around_maze_v" + str(version) + "_" + usersName + ".pkl"
+episode_reach_goal_plot = "episode_reach_goal_plot_v" + str(version) + "_" + usersName + ".png"
+episode_reward_plot = "episode_reward_plot_v" + str(version) + "_" + usersName + ".png"
 if __name__ == "__main__":
     if TRAIN:
         train_model()
