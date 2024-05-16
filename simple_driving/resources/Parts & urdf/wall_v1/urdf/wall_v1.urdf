@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-1-g15f4949  Build Version: 1.6.7594.29634
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot name="wall_v1">
+  <link name="base_link">
+    <inertial>
+      <origin xyz="-8.1422E-20 -1.2858E-18 0.0034544" rpy="0 0 0" />
+      <mass value="10000" />
+      <inertia ixx="0.00017822" ixy="2.9425E-14" ixz="1.0379E-20" iyy="0.00017822" iyz="-1.9082E-21" izz="0.00015752" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://wall_v1/meshes/wall_v4.STL" />
+      </geometry>
+      <material name="">
+        <texture filename="package://wall_v1/textures/wall.png" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://wall_v1/meshes/wall_v4.STL" />
+      </geometry>
+    </collision>
+  </link>
+</robot>

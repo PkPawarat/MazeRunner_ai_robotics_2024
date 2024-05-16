@@ -29,15 +29,15 @@ import torch.nn.functional as F
 import torch.optim as optim
 import os
 
-TRAIN = True  # if set to false will skip training, load the last saved model and use that for testing
+TRAIN = False  # if set to false will skip training, load the last saved model and use that for testing
 USE_PREVIOUS_MODEL = True # if set to false will not use the previous model but will use the current model
 
 # Hyper parameters that will be used in the DQN algorithm
 EPISODES = 5000                 # number of episodes to run the training for
-LEARNING_RATE = 0.00015         # the learning rate for optimising the neural network weights
+LEARNING_RATE = 0.00025         # the learning rate for optimising the neural network weights
 MEM_SIZE = 50000                # maximum size of the replay memory - will start overwritting values once this is exceed
 REPLAY_START_SIZE = 10000       # The amount of samples to fill the replay memory with before we start learning
-BATCH_SIZE = 96                 # Number of random samples from the replay memory we use for training each iteration
+BATCH_SIZE = 64                 # Number of random samples from the replay memory we use for training each iteration
 GAMMA = 0.99                    # Discount factor
 EPS_START = 0.1                 # Initial epsilon value for epsilon greedy action sampling
 EPS_END = 0.0001                # Final epsilon value
@@ -54,10 +54,8 @@ best_reward = 0
 average_reward = 0
 episode_history = []
 episode_reward_history = []
-# List to store current_goal for each episode
-current_goal_history = []
-
 np.bool = np.bool_
+print(torch.cuda.is_available())
 # for creating the policy and target networks - same architecture
 class Network(torch.nn.Module):
     def __init__(self, env):
@@ -65,9 +63,8 @@ class Network(torch.nn.Module):
         self.input_shape = env.observation_space.shape
         self.action_space = env.action_space.n
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        print("self.device => ", self.device)
-        # self.device = torch.device('cpu')
-        # self.device = torch.device('cuda:0')
+        self.device = torch.device('cpu')
+        # # self.device = torch.device('cuda:0')
         self.to(self.device)
         
         # build an MLP with 2 hidden layers
@@ -204,7 +201,15 @@ class DQN_Solver:
     def returning_epsilon(self):
         return self.exploration_rate
 
-def train_model():
+
+
+############################################################################################
+## if there is training data available. Check if the model file exists
+previous_model_file = "policy_network_run_around_maze_v2.pkl"
+model_file = "policy_network_run_around_maze_v2.pkl"
+
+# Train network
+if TRAIN:
     # Start time for Training
     start_time = time.time()
     # create training model for simple driving 
@@ -238,12 +243,11 @@ def train_model():
     for i in range(EPISODES):
         state = env.reset()[0]
         current_pos = state
-        episode_current_goal = 0  # Current goal reached in this episode
         while True:
             # sampling loop - sample random actions and add them to the replay buffer
             action = agent.choose_action(state)
-            state_, reward, done, _, info = env.step(action)
-            
+            state_, reward, done, info, _ = env.step(action)
+
             ####### add sampled experience to replay buffer ##########
             agent.memory.add(state, action, reward, state_, done)
             ##########################################################
@@ -251,13 +255,11 @@ def train_model():
             # only start learning once replay memory reaches REPLAY_START_SIZE
             if agent.memory.mem_count > REPLAY_START_SIZE:
                 agent.learn()
+                # print("reward --- ", reward)
             
             state = state_
             episode_batch_score += reward
             episode_reward += reward
-            
-            # Access current_goal and append it to the list
-            episode_current_goal = state_[len(state_)-1]
 
             if done:
                 break
@@ -265,8 +267,6 @@ def train_model():
         episode_history.append(i)
         episode_reward_history.append(episode_reward)
         episode_reward = 0.0
-        
-        current_goal_history.append(episode_current_goal)
 
         # save our model every batches of 100 episodes so we can load later. (note: you can interrupt the training any time and load the latest saved model when testing)
         if i % 100 == 0 and agent.memory.mem_count > REPLAY_START_SIZE:
@@ -281,64 +281,87 @@ def train_model():
     total_time = current_time - start_time
     print(f'Training took: {total_time/60} minutes!')
     plt.plot(episode_history, episode_reward_history)
-    plt.xlabel('Episode')
-    plt.ylabel('Reward')
-    plt.title('Episode Reward History')
-    # Save the plot as an image file
-    plt.savefig('episode_reward_plot.png')
-
-
-    plt.plot(episode_history, current_goal_history)
-    plt.xlabel('Episode')
-    plt.ylabel('Reach Goal')
-    plt.title('Episode Reach Goal History')
-    # Save the plot as an image file
-    plt.savefig('episode_reach_goal_plot.png')
-
-    # Displaying the plot is optional
     plt.show()
 
-def test_model(model_file):
-    env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
-    agent = DQN_Solver(env)
-    agent.policy_network.load_state_dict(torch.load(model_file))
-    agent.policy_network.eval()
 
-    for _ in range(10):
-        state = env.reset()[0]
-        total_reward = 0
-        while True:
-            with torch.no_grad():
-                q_values = agent.policy_network(torch.tensor(state, dtype=torch.float32))
-            action = torch.argmax(q_values).item()
-            state, reward, done, info, _ = env.step(action)
-            total_reward += reward
-            env.render()
-            if done:
-                print(f"Test completed with reward: {total_reward}")
-                break
-    time.sleep(5)
-    env.close()
+###########################################################################################
+# Test trained policy for 10 time
+env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
+# agent = DQN_Solver(env)
+print("Start loading training policy")
+# agent.policy_network.load_state_dict(torch.load(model_file))
+print("finished loading training policy")
 
-def load_and_render_simulator():
-    env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
-    state = env.reset()[0]
-    done = False
-    while not done:
-        _, _, done,_, _ = env.step(env.action_space.sample())  # Take random actions
+state = env.reset()[0]
+# agent.policy_network.eval()
+import msvcrt
+import time
+
+import msvcrt
+
+def get_action():
+    while True:
+        if msvcrt.kbhit():
+            key = msvcrt.getch().decode('utf-8').lower()
+            if key in ['w', 'a', 's', 'd', 'z', 'c', 'x', 'q']:
+                if key == 'w':
+                    return 7  # Forward
+                elif key == 'a':
+                    return 8  # Forward-left
+                elif key == 's':
+                    return 1  # Reverse
+                elif key == 'd':
+                    return 6  # Forward-right
+                elif key == 'z':
+                    return 0  # Reverse-left
+                elif key == 'c':
+                    return 2  # Reverse-right
+                elif key == 'x':
+                    return 4  # Reverse-right
+                elif key == 'q':
+                    return 'q'  # Reverse-right
+listaction = [
+    8,8,8,8,8,8,8,7,7,7,7,7,7,7,7,7,7,6,6,6,6,8,6,8,6,6,6,8,8,8,6,8,8,6,6,6,7,7,8,8,7,7,8,7,7,7,6,6,7,7,8,8,8,8,1,1,1,1,1,1,1,4,4,2,2,0,0,0,0,0,0,0,8,8,8,8,8,8,8,8,8,8,8,6,8,7,7,7,7,7,7,7,7,7,6,7,7,7,8,7,7,7,7,7,7,7,7,7,6,6,6,8,8,4,4,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,7,7,7,7,7,7,7,7,7,7,8,6,8,6,8,6,8,8,8,7,7,7,6,7,7,7,6,7,7,7,7,7,7,7,8,6,7,7,7,7,7,7,6,10
+]
+
+while True:
+    print("""Action Space:
+                    w: Forward
+                    a: Steer-left
+                    s: Reverse
+                    d: Steer-right
+                    Press 'q' to quit""")
+    action = get_action()
+    
+    if action == 10:
+            break
+        
+    if action is not None:
+        listaction.append(action)
+        state_, reward, done, info, _ = env.step(action)
+        state = state_
         env.render()
-    env.close()
+            
+    # action = 0
+    # for i in listaction:
+    #     action = i
+    #     if action == 10:
+    #         break
+        
+    #     if action is not None:
+    #         listaction.append(action)
+    #         state_, reward, done, info, _ = env.step(action)
+    #         state = state_
+    #         env.render()
+            
+    if action == 10: 
+        break
+        
+for action in listaction:
+    print(action)
 
-############################################################################################
-## if there is training data available. Check if the model file exists
-previous_model_file = "policy_network_run_around_maze_v4_PK.pkl"
-model_file = "policy_network_run_around_maze_v4_PK.pkl"
 
-if __name__ == "__main__":
-    if TRAIN:
-        train_model()
-    else:
-        test_model(model_file)
 
-    # load_and_render_simulator()
+time.sleep(5)
 
+env.close()
