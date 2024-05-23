@@ -30,7 +30,7 @@ import torch.optim as optim
 import os
 
 TRAIN = True  # if set to false will skip training, load the last saved model and use that for testing
-USE_PREVIOUS_MODEL = True # if set to false will not use the previous model but will use the current model
+USE_PREVIOUS_MODEL = False # if set to false will not use the previous model but will use the current model
 
 # Hyper parameters that will be used in the DQN algorithm
 EPISODES = 5000                 # number of episodes to run the training for
@@ -219,7 +219,7 @@ def train_model():
     episode_batch_score = 0
     episode_reward = 0
     agent = DQN_Solver(env)  # create DQN agent
-    plt.clf()
+    # plt.clf()
     
     if os.path.exists(previous_model_file):
         # Load pre-trained model
@@ -237,17 +237,14 @@ def train_model():
         
     for i in range(EPISODES):
         state = env.reset()[0]
-        current_pos = state
         episode_current_goal = 0  # Current goal reached in this episode
         while True:
             # sampling loop - sample random actions and add them to the replay buffer
             action = agent.choose_action(state)
             state_, reward, done, _, info = env.step(action)
             
-            # ## assign zero to the current_goal from state_ because it's conflicting with test model
-            # # Access current_goal to the episode_current_goal
+            # Access current_goal to the episode_current_goal
             episode_current_goal = state_[len(state_)-1]
-            state_[len(state_)-1] = 0
             
             ####### add sampled experience to replay buffer ##########
             agent.memory.add(state, action, reward, state_, done)
@@ -275,10 +272,30 @@ def train_model():
             torch.save(agent.policy_network.state_dict(), model_file)
             print("average total reward per episode batch since episode ", i, ": ", episode_batch_score/ float(100))
             episode_batch_score = 0
+            
+            current_time = time.time()
+            total_time = current_time - start_time
+            print(f'Training took: {total_time/60} minutes!')
+            plt.figure()  
+            plt.plot(episode_history, episode_reward_history)
+            plt.xlabel('Episode')
+            plt.ylabel('Reward')
+            plt.title('Episode Reward History')
+            # Save the plot as an image file
+            plt.savefig(episode_reach_goal_plot)
+
+            plt.figure()  
+            plt.plot(episode_history, current_goal_history)
+            plt.xlabel('Episode')
+            plt.ylabel('Reach Goal')
+            plt.title('Episode Reach Goal History')
+            # Save the plot as an image file
+            plt.savefig(episode_reward_plot)
+            
         elif agent.memory.mem_count < REPLAY_START_SIZE:
             print(f"waiting for buffer to fill... {i}")
             episode_batch_score = 0
-    
+
     current_time = time.time()
     total_time = current_time - start_time
     print(f'Training took: {total_time/60} minutes!')
@@ -334,17 +351,15 @@ def load_and_render_simulator():
 
 ############################################################################################
 ## if there is training data available. Check if the model file exists
-version = 6
+version = 7
 usersName = "PK"
-previous_model_file = "policy_network_run_around_maze_v5_PK.pkl"
-model_file = "policy_network_run_around_maze_v" + str(version) + "_" + usersName + ".pkl"
-episode_reach_goal_plot = "episode_reach_goal_plot_v" + str(version) + "_" + usersName + ".png"
-episode_reward_plot = "episode_reward_plot_v" + str(version) + "_" + usersName + ".png"
+previous_model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version-1) + "_" + usersName + ".pkl"
+model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version) + "_" + usersName + ".pkl"
+episode_reach_goal_plot = "trainingPolicy/episode_reach_goal_plot_v" + str(version) + "_" + usersName + ".png"
+episode_reward_plot = "trainingPolicy/episode_reward_plot_v" + str(version) + "_" + usersName + ".png"
 if __name__ == "__main__":
     if TRAIN:
         train_model()
     else:
         test_model(model_file)
-
-    # load_and_render_simulator()
 
