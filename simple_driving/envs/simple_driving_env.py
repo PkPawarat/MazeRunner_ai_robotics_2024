@@ -381,7 +381,7 @@ class SimpleDrivingEnv(gym.Env):
         return hit_distances
     
     def _termination(self):
-        return self._envStepCounter > 500
+        return self._envStepCounter > 5000
 
     def close(self):
         self._p.disconnect()
