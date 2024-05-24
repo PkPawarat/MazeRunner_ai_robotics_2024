@@ -30,7 +30,7 @@ import torch.optim as optim
 import os
 
 TRAIN = True  # if set to false will skip training, load the last saved model and use that for testing
-USE_PREVIOUS_MODEL = False # if set to false will not use the previous model but will use the current model
+USE_PREVIOUS_MODEL = True # if set to false will not use the previous model but will use the current model
 
 # Hyper parameters that will be used in the DQN algorithm
 EPISODES = 5000                 # number of episodes to run the training for
@@ -351,7 +351,7 @@ def load_and_render_simulator():
 
 ############################################################################################
 ## if there is training data available. Check if the model file exists
-version = 7
+version = 8
 usersName = "PK"
 previous_model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version-1) + "_" + usersName + ".pkl"
 model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version) + "_" + usersName + ".pkl"

@@ -106,7 +106,7 @@ class SimpleDrivingEnv(gym.Env):
         reward += self.time_penalty
         dist_to_goal = self.get_dist_to_goal(carpos, self.get_goal_observation())
         reward += self.distance_reward * (self.prev_dist_to_goal - dist_to_goal)
-        reward += self.smooth_driving_reward if action in [1, 7] else 0  # Smooth driving reward only forwards and backwards
+        reward += self.smooth_driving_reward if action in [1] else 0  # Smooth driving reward only forwards
         # reward += self.smooth_driving_reward if action in [3, 5, 4] else 0  # Smooth driving reward
         reward += self.obstacle_avoidance_reward if rewardWall == 0 else 0  # Obstacle avoidance reward
         reward += self.collision_penalty if rewardWall < 0 else 0  # Collision penalty
@@ -121,7 +121,7 @@ class SimpleDrivingEnv(gym.Env):
                 self.done = True
                 self.reached_goal = True
                 reward += 500  # Additional reward for reaching last goal
-                print("reached last goal____________Current goal -> Total goals:", self.current_goal, "->", len(self.goal_objects)-1)
+                # print("reached last goal____________Current goal -> Total goals:", self.current_goal, "->", len(self.goal_objects)-1)
             else: 
                 self.goal_objects[self.current_goal].delete()
                 self.current_goal += 1
