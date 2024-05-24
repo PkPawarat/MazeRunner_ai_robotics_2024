@@ -15,7 +15,8 @@ class Car:
                                          baseOrientation=orientation)
         # self.car = self.client.loadURDF(fileName=f_name,
         #                       basePosition=[base[0], base[1], 0.1])
-        self.base = base
+        self.base = [base[0], base[1], 0.1] if len(base) == 2 else base
+        self.base_orientation = orientation
         # Joint indices as found by p.getJointInfo()
         self.steering_joints = [0, 2]
         self.drive_joints = [1, 3, 4, 5]
@@ -84,7 +85,12 @@ class Car:
         except Exception:
             return
 
-
+    def reset(self):
+        # Reset the car to the initial base position and orientation
+        action = [0,0]
+        self.apply_action(action)
+        self.client.resetBasePositionAndOrientation(self.car, self.base, self.base_orientation)
+        self.joint_speed = 0
 
 
 

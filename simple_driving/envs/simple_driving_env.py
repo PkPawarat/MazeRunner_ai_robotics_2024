@@ -138,16 +138,11 @@ class SimpleDrivingEnv(gym.Env):
 
     def reset(self):
         self.current_goal = 0 # current goal object
-        Plane(self._p)
-
         self.setupMaze()
-        
         carpos = self.car.get_observation()
-                
         self._envStepCounter = 0
         self.done = False
         self.reached_goal = False
-
         # Get observation to return
         self.prev_dist_to_goal = self.get_dist_to_goal(carpos, self.get_goal_observation())
         ob = self.get_observation(carpos, self.get_goal_observation())
@@ -158,10 +153,10 @@ class SimpleDrivingEnv(gym.Env):
         self.current_goal = 0 # current goal object
         self.start_node = None # start node
         self.end_node = None # end node
-        Plane(self._p)
 
         listofNodes = []
         if self.path_planner is None:
+            Plane(self._p)
             self.path_planner = pathplanning.PathPlanning()
         
             # Visual maze element in the environment
@@ -194,18 +189,18 @@ class SimpleDrivingEnv(gym.Env):
             self.shortest_path = self.path_planner.execution(self.start_node, self.end_node)
 
             # Plot shortest_path
-            # carpos = self.car.get_observation()
+            carpos = self.car.get_observation()
             for node in self.shortest_path:
-                # dist = self.get_dist_to_goal(carpos, (node.X, node.Y))
-                # if dist <= 2:
-                #     pass
-                # else:
+                dist = self.get_dist_to_goal(carpos, (node.X, node.Y))
+                if dist <= 2:
+                    pass
+                else:
                     self.goal_objects.append(Goal(self._p, (node.X, node.Y)))
 
         else:
-            self.car.delete()
-            self.car = Car(self._p, self.car.base)
-                
+            self.car.reset()
+        
+        if self._renders:
             for index, obj in enumerate(self.goal_objects):
                 if obj.goal is None:
                     self.goal_objects[index] = Goal(self._p, obj.base)        
@@ -386,7 +381,7 @@ class SimpleDrivingEnv(gym.Env):
         return hit_distances
     
     def _termination(self):
-        return self._envStepCounter > 5000
+        return self._envStepCounter > 500
 
     def close(self):
         self._p.disconnect()
