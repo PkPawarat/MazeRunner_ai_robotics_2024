@@ -14,7 +14,7 @@
       <geometry>
         <mesh filename="package://wall_v1/meshes/wall_v4.STL" />
       </geometry>
-      <material name="wall_material">
+      <material name="">
         <texture filename="package://wall_v1/textures/wall.png" />
       </material>
     </visual>
@@ -23,7 +23,6 @@
       <geometry>
         <mesh filename="package://wall_v1/meshes/wall_v4.STL" />
       </geometry>
-      <material name="wall_material" />
     </collision>
   </link>
 </robot>

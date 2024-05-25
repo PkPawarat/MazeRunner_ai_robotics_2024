@@ -64,10 +64,10 @@ class Network(torch.nn.Module):
         super().__init__()
         self.input_shape = env.observation_space.shape
         self.action_space = env.action_space.n
-        # self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        print("self.device => ", self.device)
         # self.device = torch.device('cpu')
-        # print("self.device => ", self.device)
-        self.device = torch.device('cuda:0')
+        # self.device = torch.device('cuda:0')
         self.to(self.device)
         
         # build an MLP with 2 hidden layers
@@ -219,7 +219,7 @@ def train_model():
     episode_batch_score = 0
     episode_reward = 0
     agent = DQN_Solver(env)  # create DQN agent
-    # plt.clf()
+    plt.clf()
     
     if os.path.exists(previous_model_file):
         # Load pre-trained model
@@ -237,14 +237,12 @@ def train_model():
         
     for i in range(EPISODES):
         state = env.reset()[0]
+        current_pos = state
         episode_current_goal = 0  # Current goal reached in this episode
         while True:
             # sampling loop - sample random actions and add them to the replay buffer
             action = agent.choose_action(state)
             state_, reward, done, _, info = env.step(action)
-            
-            # Access current_goal to the episode_current_goal
-            episode_current_goal = state_[len(state_)-1]
             
             ####### add sampled experience to replay buffer ##########
             agent.memory.add(state, action, reward, state_, done)
@@ -258,6 +256,9 @@ def train_model():
             episode_batch_score += reward
             episode_reward += reward
             
+            # Access current_goal and append it to the list
+            episode_current_goal = state_[len(state_)-1]
+
             if done:
                 break
 
@@ -272,51 +273,30 @@ def train_model():
             torch.save(agent.policy_network.state_dict(), model_file)
             print("average total reward per episode batch since episode ", i, ": ", episode_batch_score/ float(100))
             episode_batch_score = 0
-            
-            current_time = time.time()
-            total_time = current_time - start_time
-            print(f'Training took: {total_time/60} minutes!')
-            plt.figure()  
-            plt.plot(episode_history, episode_reward_history)
-            plt.xlabel('Episode')
-            plt.ylabel('Reward')
-            plt.title('Episode Reward History')
-            # Save the plot as an image file
-            plt.savefig(episode_reach_goal_plot)
-
-            plt.figure()  
-            plt.plot(episode_history, current_goal_history)
-            plt.xlabel('Episode')
-            plt.ylabel('Reach Goal')
-            plt.title('Episode Reach Goal History')
-            # Save the plot as an image file
-            plt.savefig(episode_reward_plot)
-            
         elif agent.memory.mem_count < REPLAY_START_SIZE:
             print(f"waiting for buffer to fill... {i}")
             episode_batch_score = 0
-
+    
     current_time = time.time()
     total_time = current_time - start_time
     print(f'Training took: {total_time/60} minutes!')
-    plt.figure()  
     plt.plot(episode_history, episode_reward_history)
     plt.xlabel('Episode')
     plt.ylabel('Reward')
     plt.title('Episode Reward History')
     # Save the plot as an image file
-    plt.savefig(episode_reach_goal_plot)
+    plt.savefig('episode_reward_plot.png')
 
-    plt.figure()  
+
     plt.plot(episode_history, current_goal_history)
     plt.xlabel('Episode')
     plt.ylabel('Reach Goal')
     plt.title('Episode Reach Goal History')
     # Save the plot as an image file
-    plt.savefig(episode_reward_plot)
+    plt.savefig('episode_reach_goal_plot.png')
 
     # Displaying the plot is optional
-    # plt.show()
+    plt.show()
 
 def test_model(model_file):
     env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
@@ -351,15 +331,14 @@ def load_and_render_simulator():
 
 ############################################################################################
 ## if there is training data available. Check if the model file exists
-version = 10
-usersName = "PK"
-previous_model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version-2) + "_" + usersName + ".pkl"
-model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version) + "_" + usersName + ".pkl"
-episode_reach_goal_plot = "trainingPolicy/episode_reach_goal_plot_v" + str(version) + "_" + usersName + ".png"
-episode_reward_plot = "trainingPolicy/episode_reward_plot_v" + str(version) + "_" + usersName + ".png"
+previous_model_file = "policy_network_run_around_maze_v4_PK.pkl"
+model_file = "policy_network_run_around_maze_v4_PK.pkl"
+
 if __name__ == "__main__":
     if TRAIN:
         train_model()
     else:
         test_model(model_file)
+
+    # load_and_render_simulator()
 

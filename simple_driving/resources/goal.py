@@ -11,15 +11,12 @@ class Goal:
         self.goal = client.loadURDF(fileName=f_name, basePosition=[base[0], base[1], 0])
 
     def delete(self):
-        try:
-            self.client.removeBody(self.goal)
-            self.goal = None  # Set to None to indicate the goal has been deleted
-        except Exception:
-            return
+        self.client.removeBody(self.goal)
+        self.goal = None  # Set to None to indicate the goal has been deleted
         
     def get_observation(self):
         # Get the position and orientation of the car in the simulation
-        pos = self.base
+        pos, ang = self.client.getBasePositionAndOrientation(self.goal)
         pos = pos[:2]
         # Concatenate position
         observation = pos
