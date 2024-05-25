@@ -82,7 +82,7 @@ To run MazeRunner, follow these steps:
 ## Contributors
 
 - Pawarat Phatthanaphusakun 13662352
-- [Collaborator 1]
+- Mostafa Rahimi 13914736
 - [Collaborator 2]
 - [Collaborator 3]
 
