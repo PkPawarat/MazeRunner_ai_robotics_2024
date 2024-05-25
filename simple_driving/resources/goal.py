@@ -1,5 +1,6 @@
 import pybullet as p
 import os
+import math
 
 
 class Goal:
@@ -10,5 +11,17 @@ class Goal:
         self.goal = client.loadURDF(fileName=f_name, basePosition=[base[0], base[1], 0])
 
     def delete(self):
-        self.client.removeBody(self.goal)
-        self.goal = None  # Set to None to indicate the goal has been deleted
+        try:
+            self.client.removeBody(self.goal)
+            self.goal = None  # Set to None to indicate the goal has been deleted
+        except Exception:
+            return
+        
+    def get_observation(self):
+        # Get the position and orientation of the car in the simulation
+        pos = self.base
+        pos = pos[:2]
+        # Concatenate position
+        observation = pos
+
+        return observation

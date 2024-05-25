@@ -67,6 +67,18 @@ To run MazeRunner, follow these steps:
 3. **Testing**:
    - Test the trained models in the maze environment to ensure proper navigation and image recognition.
 
+## Action Space
+
+- 0: Reverse-Left
+- 1: Reverse
+- 2: Reverse-Right
+- 3: Steer-Left (no throttle)
+- 4: No throttle and no steering
+- 5: Steer-Right (no throttle)
+- 6: Forward-right
+- 7: Forward
+- 8: Forward-left
+
 ## Contributors
 
 - Pawarat Phatthanaphusakun 13662352

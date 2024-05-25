@@ -53,22 +53,14 @@ class PathPlanning:
     def automatic_adding_edge(self, all_nodes):
         for i in range(len(all_nodes)):
             for j in range(i + 1, len(all_nodes)):
-                if abs(all_nodes[i].X - all_nodes[j].X) <= self.MaxDistanceNode and \
-                        abs(all_nodes[i].Y - all_nodes[j].Y) <= self.MaxDistanceNode:
+                # Only add edges if the nodes are adjacent vertically or horizontally
+                if abs(all_nodes[i].X - all_nodes[j].X) <= self.MaxDistanceNode and all_nodes[i].Y == all_nodes[j].Y:
+                    self.add_edge(all_nodes[i], all_nodes[j], 1.0)
+                    self.add_edge(all_nodes[j], all_nodes[i], 1.0)
+                elif abs(all_nodes[i].Y - all_nodes[j].Y) <= self.MaxDistanceNode and all_nodes[i].X == all_nodes[j].X:
                     self.add_edge(all_nodes[i], all_nodes[j], 1.0)
                     self.add_edge(all_nodes[j], all_nodes[i], 1.0)
 
-                    distance_between = self.calculate_distance(all_nodes[i], all_nodes[j])
-                    num_of_extra_nodes = int(distance_between / self.ExtraNodeDistance)
-
-                    for k in range(1, num_of_extra_nodes + 1):
-                        ratio = k / (num_of_extra_nodes + 1)
-                        new_x = all_nodes[i].X + ratio * (all_nodes[j].X - all_nodes[i].X)
-                        new_y = all_nodes[i].Y + ratio * (all_nodes[j].Y - all_nodes[i].Y)
-                        extra_node = Node(new_x, new_y)
-
-                        self.add_edge(all_nodes[i], extra_node, self.ExtraNodeDistance)
-                        self.add_edge(extra_node, all_nodes[j], self.ExtraNodeDistance)
 
     def calculate_distance(self, node_a, node_b):
         return math.sqrt((node_a.X - node_b.X) ** 2 + (node_a.Y - node_b.Y) ** 2)

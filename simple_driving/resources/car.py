@@ -1,15 +1,22 @@
 import pybullet as p
 import os
 import math
+import numpy as np
 
 
 class Car:
     def __init__(self, client, base):
         self.client = client
         f_name = os.path.join(os.path.dirname(__file__), 'simplecar.urdf')
+        # Load URDF with rotation
+        orientation = p.getQuaternionFromEuler([0, 0, np.pi/2])  # Rotate by 90 degrees around Z-axis
         self.car = self.client.loadURDF(fileName=f_name,
-                              basePosition=[base[0], base[1], 0.1])
-
+                                         basePosition=[base[0], base[1], 0.1],
+                                         baseOrientation=orientation)
+        # self.car = self.client.loadURDF(fileName=f_name,
+        #                       basePosition=[base[0], base[1], 0.1])
+        self.base = [base[0], base[1], 0.1] if len(base) == 2 else base
+        self.base_orientation = orientation
         # Joint indices as found by p.getJointInfo()
         self.steering_joints = [0, 2]
         self.drive_joints = [1, 3, 4, 5]
@@ -36,17 +43,18 @@ class Car:
         self.client.setJointMotorControlArray(self.car, self.steering_joints,
                                     controlMode=p.POSITION_CONTROL,
                                     targetPositions=[steering_angle] * 2)
-        if throttle < 0 and self.joint_speed > 0: self.joint_speed = -self.joint_speed
-        if throttle > 0 and self.joint_speed < 0: self.joint_speed = -self.joint_speed
+        if throttle < 0 and self.joint_speed > 0: self.joint_speed = 0
+        if throttle > 0 and self.joint_speed < 0: self.joint_speed = 0
         # Calculate drag / mechanical resistance ourselves
         # Using velocity control, as torque control requires precise models
         friction = -self.joint_speed * (self.joint_speed * self.c_drag +
                                         self.c_rolling)
         acceleration = self.c_throttle * throttle + friction
         # Each time step is 1/240 of a second
-        self.joint_speed = min(self.joint_speed + 0.01 * acceleration, 10.0)
-        # if self.joint_speed < 0:
-        #     self.joint_speed = 0
+        self.joint_speed = max(min(self.joint_speed + 0.01 * acceleration, 10.0), -10.0)# max speed value should be just 10 , -10
+
+        if throttle == 0 and steering_angle == 0:
+            self.joint_speed = 0
 
         # Set the velocity of the wheel joints directly
         self.client.setJointMotorControlArray(
@@ -69,8 +77,20 @@ class Car:
         observation = (pos + ori + vel)
 
         return observation
+    
+    def delete(self):
+        try:
+            self.client.removeBody(self.car)
+            self.car = None  # Set to None to indicate the goal has been deleted
+        except Exception:
+            return
 
-
+    def reset(self):
+        # Reset the car to the initial base position and orientation
+        action = [0,0]
+        self.apply_action(action)
+        self.client.resetBasePositionAndOrientation(self.car, self.base, self.base_orientation)
+        self.joint_speed = 0
 
 
 

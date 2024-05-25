@@ -34,10 +34,10 @@ USE_PREVIOUS_MODEL = True # if set to false will not use the previous model but 
 
 # Hyper parameters that will be used in the DQN algorithm
 EPISODES = 5000                 # number of episodes to run the training for
-LEARNING_RATE = 0.00025         # the learning rate for optimising the neural network weights
+LEARNING_RATE = 0.00015         # the learning rate for optimising the neural network weights
 MEM_SIZE = 50000                # maximum size of the replay memory - will start overwritting values once this is exceed
 REPLAY_START_SIZE = 10000       # The amount of samples to fill the replay memory with before we start learning
-BATCH_SIZE = 64                 # Number of random samples from the replay memory we use for training each iteration
+BATCH_SIZE = 96                 # Number of random samples from the replay memory we use for training each iteration
 GAMMA = 0.99                    # Discount factor
 EPS_START = 0.1                 # Initial epsilon value for epsilon greedy action sampling
 EPS_END = 0.0001                # Final epsilon value
@@ -54,17 +54,20 @@ best_reward = 0
 average_reward = 0
 episode_history = []
 episode_reward_history = []
+# List to store current_goal for each episode
+current_goal_history = []
+
 np.bool = np.bool_
-print(torch.cuda.is_available())
 # for creating the policy and target networks - same architecture
 class Network(torch.nn.Module):
     def __init__(self, env):
         super().__init__()
         self.input_shape = env.observation_space.shape
         self.action_space = env.action_space.n
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        self.device = torch.device('cpu')
-        # # self.device = torch.device('cuda:0')
+        # self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        # self.device = torch.device('cpu')
+        # print("self.device => ", self.device)
+        self.device = torch.device('cuda:0')
         self.to(self.device)
         
         # build an MLP with 2 hidden layers
@@ -216,7 +219,7 @@ def train_model():
     episode_batch_score = 0
     episode_reward = 0
     agent = DQN_Solver(env)  # create DQN agent
-    plt.clf()
+    # plt.clf()
     
     if os.path.exists(previous_model_file):
         # Load pre-trained model
@@ -234,12 +237,15 @@ def train_model():
         
     for i in range(EPISODES):
         state = env.reset()[0]
-        current_pos = state
+        episode_current_goal = 0  # Current goal reached in this episode
         while True:
             # sampling loop - sample random actions and add them to the replay buffer
             action = agent.choose_action(state)
-            state_, reward, done, info, _ = env.step(action)
-
+            state_, reward, done, _, info = env.step(action)
+            
+            # Access current_goal to the episode_current_goal
+            episode_current_goal = state_[len(state_)-1]
+            
             ####### add sampled experience to replay buffer ##########
             agent.memory.add(state, action, reward, state_, done)
             ##########################################################
@@ -247,33 +253,70 @@ def train_model():
             # only start learning once replay memory reaches REPLAY_START_SIZE
             if agent.memory.mem_count > REPLAY_START_SIZE:
                 agent.learn()
-                # print("reward --- ", reward)
             
             state = state_
             episode_batch_score += reward
             episode_reward += reward
-
+            
             if done:
                 break
 
         episode_history.append(i)
         episode_reward_history.append(episode_reward)
         episode_reward = 0.0
+        
+        current_goal_history.append(episode_current_goal)
 
         # save our model every batches of 100 episodes so we can load later. (note: you can interrupt the training any time and load the latest saved model when testing)
         if i % 100 == 0 and agent.memory.mem_count > REPLAY_START_SIZE:
             torch.save(agent.policy_network.state_dict(), model_file)
             print("average total reward per episode batch since episode ", i, ": ", episode_batch_score/ float(100))
             episode_batch_score = 0
+            
+            current_time = time.time()
+            total_time = current_time - start_time
+            print(f'Training took: {total_time/60} minutes!')
+            plt.figure()  
+            plt.plot(episode_history, episode_reward_history)
+            plt.xlabel('Episode')
+            plt.ylabel('Reward')
+            plt.title('Episode Reward History')
+            # Save the plot as an image file
+            plt.savefig(episode_reach_goal_plot)
+
+            plt.figure()  
+            plt.plot(episode_history, current_goal_history)
+            plt.xlabel('Episode')
+            plt.ylabel('Reach Goal')
+            plt.title('Episode Reach Goal History')
+            # Save the plot as an image file
+            plt.savefig(episode_reward_plot)
+            
         elif agent.memory.mem_count < REPLAY_START_SIZE:
             print(f"waiting for buffer to fill... {i}")
             episode_batch_score = 0
-    
+
     current_time = time.time()
     total_time = current_time - start_time
     print(f'Training took: {total_time/60} minutes!')
+    plt.figure()  
     plt.plot(episode_history, episode_reward_history)
-    plt.show()
+    plt.xlabel('Episode')
+    plt.ylabel('Reward')
+    plt.title('Episode Reward History')
+    # Save the plot as an image file
+    plt.savefig(episode_reach_goal_plot)
+
+    plt.figure()  
+    plt.plot(episode_history, current_goal_history)
+    plt.xlabel('Episode')
+    plt.ylabel('Reach Goal')
+    plt.title('Episode Reach Goal History')
+    # Save the plot as an image file
+    plt.savefig(episode_reward_plot)
+
+    # Displaying the plot is optional
+    # plt.show()
 
 def test_model(model_file):
     env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
@@ -288,7 +331,7 @@ def test_model(model_file):
             with torch.no_grad():
                 q_values = agent.policy_network(torch.tensor(state, dtype=torch.float32))
             action = torch.argmax(q_values).item()
-            state, reward, done, _ = env.step(action)
+            state, reward, done, info, _ = env.step(action)
             total_reward += reward
             env.render()
             if done:
@@ -308,14 +351,15 @@ def load_and_render_simulator():
 
 ############################################################################################
 ## if there is training data available. Check if the model file exists
-previous_model_file = "policy_network_run_around_maze_v2.pkl"
-model_file = "policy_network_run_around_maze_v2.pkl"
-
+version = 10
+usersName = "PK"
+previous_model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version-2) + "_" + usersName + ".pkl"
+model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version) + "_" + usersName + ".pkl"
+episode_reach_goal_plot = "trainingPolicy/episode_reach_goal_plot_v" + str(version) + "_" + usersName + ".png"
+episode_reward_plot = "trainingPolicy/episode_reward_plot_v" + str(version) + "_" + usersName + ".png"
 if __name__ == "__main__":
-    # if TRAIN:
-    #     train_model()
-    # else:
-    #     test_model()
-
-    load_and_render_simulator()
+    if TRAIN:
+        train_model()
+    else:
+        test_model(model_file)
 
