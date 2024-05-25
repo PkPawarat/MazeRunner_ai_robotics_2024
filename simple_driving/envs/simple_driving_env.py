@@ -65,10 +65,11 @@ class SimpleDrivingEnv(gym.Env):
 
         # New reward design parameters
         self.goal_reward = 50  # Reward for reaching the goal
-        self.time_penalty = -0.1  # Penalty for each time step
+        self.time_penalty = -0.5  # Penalty for each time step
         self.collision_penalty = -10  # Penalty for collisions
         self.distance_reward = 0.05  # Reward for covering distance towards the goal
         self.smooth_driving_reward = 0.01  # Reward for smooth driving behavior
+        self.not_driving_reward = -0.05  # Penalty for not driving behavior correctly
         self.obstacle_avoidance_reward = 1  # Reward for avoiding obstacles
         self.max_distance_reward = 2  # Maximum reward for covering distance
         
@@ -106,7 +107,8 @@ class SimpleDrivingEnv(gym.Env):
         reward += self.time_penalty
         dist_to_goal = self.get_dist_to_goal(carpos, self.get_goal_observation())
         reward += self.distance_reward * (self.prev_dist_to_goal - dist_to_goal)
-        reward += self.smooth_driving_reward if action in [1] else 0  # Smooth driving reward only forwards
+        reward += self.smooth_driving_reward if action in [7] else 0  # Smooth driving reward only forwards
+        reward += self.not_driving_reward if action in [3, 4, 5] else 0  # NOT driving penalty or not acceleration, deceleration 
         # reward += self.smooth_driving_reward if action in [3, 5, 4] else 0  # Smooth driving reward
         reward += self.obstacle_avoidance_reward if rewardWall == 0 else 0  # Obstacle avoidance reward
         reward += self.collision_penalty if rewardWall < 0 else 0  # Collision penalty

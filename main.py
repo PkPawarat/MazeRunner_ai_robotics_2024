@@ -65,9 +65,9 @@ class Network(torch.nn.Module):
         self.input_shape = env.observation_space.shape
         self.action_space = env.action_space.n
         # self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        self.device = torch.device('cpu')
-        print("self.device => ", self.device)
-        # self.device = torch.device('cuda:0')
+        # self.device = torch.device('cpu')
+        # print("self.device => ", self.device)
+        self.device = torch.device('cuda:0')
         self.to(self.device)
         
         # build an MLP with 2 hidden layers
@@ -351,9 +351,9 @@ def load_and_render_simulator():
 
 ############################################################################################
 ## if there is training data available. Check if the model file exists
-version = 8
+version = 10
 usersName = "PK"
-previous_model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version-1) + "_" + usersName + ".pkl"
+previous_model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version-2) + "_" + usersName + ".pkl"
 model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version) + "_" + usersName + ".pkl"
 episode_reach_goal_plot = "trainingPolicy/episode_reach_goal_plot_v" + str(version) + "_" + usersName + ".png"
 episode_reward_plot = "trainingPolicy/episode_reward_plot_v" + str(version) + "_" + usersName + ".png"
