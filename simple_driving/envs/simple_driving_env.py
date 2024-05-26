@@ -108,7 +108,7 @@ class SimpleDrivingEnv(gym.Env):
         dist_to_goal = self.get_dist_to_goal(carpos, self.get_goal_observation())
         reward += self.distance_reward * (self.prev_dist_to_goal - dist_to_goal)
         reward += self.smooth_driving_reward if action in [7] else 0  # Smooth driving reward only forwards
-        reward += self.not_driving_reward if action in [3, 4, 5] else 0  # NOT driving penalty or not acceleration, deceleration 
+        reward += self.not_driving_reward if action in [3, 4, 5] else 0  # NOT driving penalty or not acceleration, deceleration        ///////// ADDED NEW FOR V10
         # reward += self.smooth_driving_reward if action in [3, 5, 4] else 0  # Smooth driving reward
         reward += self.obstacle_avoidance_reward if rewardWall == 0 else 0  # Obstacle avoidance reward
         reward += self.collision_penalty if rewardWall < 0 else 0  # Collision penalty
@@ -169,7 +169,7 @@ class SimpleDrivingEnv(gym.Env):
             max_y = max([coord[1] for coord in self.maze_map.keys()]) + 1
             for y in range(max_y):
                 for x in range(max_x):
-                    position = (x-(max_x/2), y-(max_y/2))
+                    position = (math.ceil(x-(max_x/2)), math.ceil(y-(max_y/2)))
                     node = pathplanning.Node(x=int(position[0]), y=int(position[1]))
                     if self.maze_map[(x, y)] == self.maze.WALL:
                         self.walls.append(Wall(self._p, position))

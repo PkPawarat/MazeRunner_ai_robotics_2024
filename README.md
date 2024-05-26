@@ -2,70 +2,60 @@
 
 ## Project Description
 
-MazeRunner is a project aimed at implementing Deep Reinforcement Learning (DRL) for autonomous maze navigation and Convolutional Neural Networks (CNN) for image recognition. The objective is to develop an AI-powered robot capable of navigating through a maze to reach a goal in a specific order.
+MazeRunner is a project dedicated to implementing Deep Reinforcement Learning (DRL) for autonomous maze navigation. The project's primary objective is to develop an AI-driven robot capable of independently navigating through a maze to reach specific goals in a predetermined sequence.
 
 ### Goal
 
-The main goal of this project is to create an autonomous robot that can successfully navigate through a maze to reach a goal while recognizing the order of the goal using image recognition.
+The overarching goal of MazeRunner is to engineer an autonomous robot proficient in navigating complex mazes, leveraging reinforcement learning techniques to identify and reach goals in the correct order.
 
 ### Approach
 
 1. **Deep Reinforcement Learning (DRL)**:
 
-   - The robot will learn to navigate the maze using DRL techniques. DRL allows the robot to learn optimal actions by interacting with the environment.
-   - Similar to quiz 3, where a car navigates towards a goal, here the robot will navigate towards the goal in the maze.
+   - Maze navigation will be achieved through DRL methodologies, enabling the robot to learn optimal navigation strategies through interaction with its environment.
+   - Similar to our previous project, where a car navigated towards a goal, here the robot will maneuver through the maze towards the designated goals.
 
-2. **Convolutional Neural Networks (CNN)**:
+2. **Maze Environment**:
 
-   - CNN will be used for image recognition to determine the order of the goal.
-   - The robot will take an image of the goal and use CNN to recognize the number associated with the goal's order.
-
-3. **Maze Environment**:
-   - The maze environment will be constructed with walls and obstacles.
-   - The maze may vary in complexity to challenge the robot's navigation capabilities.
+   - A simulated maze environment will be created, featuring various layouts with walls and obstacles.
+   - Maze complexity will be varied to challenge the robot's navigational capabilities.
 
 ## Implementation
 
-The implementation of MazeRunner will involve several steps:
+The MazeRunner implementation will encompass several key steps:
 
 1. **Environment Setup**:
 
-   - Creation of a simulated maze environment using suitable software (e.g., Pygame, Unity, etc.).
-   - Designing maze layouts with walls and obstacles.
+   - Creation of a simulated maze environment using appropriate software tools (e.g., Pygame, Unity, etc.).
+   - Design and implementation of maze configurations, incorporating walls and obstacles.
 
 2. **Deep Reinforcement Learning**:
 
-   - Implementing a DRL algorithm (e.g., Q-learning, Deep Q-Networks, etc.) to train the robot for maze navigation.
-   - Tuning hyperparameters and training the DRL model on the maze environment.
+   - Implementation of a DRL algorithm (e.g., Q-learning, Deep Q-Networks, etc.) to train the robot for maze navigation.
+   - Fine-tuning of hyperparameters and training of the DRL model within the maze environment.
 
-3. **Image Recognition with CNN**:
+3. **Integration**:
 
-   - Developing a CNN architecture for image recognition.
-   - Training the CNN model on images of goals to recognize the goal order.
-   - Integrating the CNN model with the robot's vision system.
-
-4. **Integration**:
-   - Integrating the DRL-based navigation system with the CNN-based image recognition system.
-   - Testing the integrated system in the maze environment.
+   - Seamless integration of the DRL-based navigation system with the robot's sensor inputs for optimal navigation.
+   - Rigorous testing of the integrated system within the maze environment to validate navigation capabilities.
 
 ## Usage
 
-To run MazeRunner, follow these steps:
+To deploy and utilize MazeRunner, adhere to the following steps:
 
 1. **Setup Environment**:
 
-   - Install the necessary dependencies and libraries.
-   - "python .\setup.py install"
-   - use python 3.12.2 version
-   - Set up the maze environment.
+   - Install requisite dependencies and libraries.
+   - Execute "python .\setup.py install".
+   - Utilize Python version 3.12.2.
+   - Initialize the maze environment.
 
 2. **Training**:
 
-   - Train the DRL model by running the training script.
-   - Train the CNN model for image recognition.
+   - Initiate training of the DRL model by executing the designated training script.
 
 3. **Testing**:
-   - Test the trained models in the maze environment to ensure proper navigation and image recognition.
+   - Conduct comprehensive testing of the trained model within the maze environment to verify navigation proficiency.
 
 ## Action Space
 
@@ -86,9 +76,9 @@ To run MazeRunner, follow these steps:
 - [Collaborator 2]
 - [Collaborator 3]
 
-## License
+## Demo
 
-[Insert license information]
+[![Demo Video](https://img.youtube.com/vi/xDCfFlaXbyM/0.jpg)](https://youtu.be/xDCfFlaXbyM)
 
 ## Acknowledgements
 

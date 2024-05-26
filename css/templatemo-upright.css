@@ -74,7 +74,7 @@ hr { border-top: 4px solid #CCC; }
 
 .tm-section-wrap {
 	width: calc(100% - 750px);
-	margin-left: 750px;
+	margin-left: 500px;
 	margin-right: 0;
 	position: relative;
 }
@@ -84,7 +84,7 @@ hr { border-top: 4px solid #CCC; }
 #gallery,
 #about,
 #contact {
-	padding-bottom: 150px;
+	padding-bottom: 10px;
 }
 
 .tm-parallax {
@@ -187,7 +187,7 @@ hr { border-top: 4px solid #CCC; }
 }
 
 /* Home section */
-#home { min-height: 100vh; }
+#home { min-height: 10vh; }
 .tm-col-home-l { width: calc(100% - 300px); }
 
 .tm-img-home-container {
@@ -531,7 +531,7 @@ figure.effect-honey:hover ul li a {
 .tm-carousel-item {
 	padding-left: 15px;
 	padding-right: 15px;
-	max-width: 300px;
+	max-width: 400px;
 }
 
 .tm-carousel figure {
