@@ -29,8 +29,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 import os
 
-TRAIN = True  # if set to false will skip training, load the last saved model and use that for testing
-USE_PREVIOUS_MODEL = True # if set to false will not use the previous model but will use the current model
+TRAIN = False  # if set to false will skip training, load the last saved model and use that for testing
+USE_PREVIOUS_MODEL = False # if set to false will not use the previous model but will use the current model
 
 # Hyper parameters that will be used in the DQN algorithm
 EPISODES = 5000                 # number of episodes to run the training for
@@ -65,9 +65,9 @@ class Network(torch.nn.Module):
         self.input_shape = env.observation_space.shape
         self.action_space = env.action_space.n
         # self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        # self.device = torch.device('cpu')
-        # print("self.device => ", self.device)
-        self.device = torch.device('cuda:0')
+        self.device = torch.device('cpu')
+        print("self.device => ", self.device)
+        # self.device = torch.device('cuda:0')
         self.to(self.device)
         
         # build an MLP with 2 hidden layers
@@ -319,12 +319,14 @@ def train_model():
     # plt.show()
 
 def test_model(model_file):
-    env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
+    env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=False, isDiscrete=True)
     agent = DQN_Solver(env)
     agent.policy_network.load_state_dict(torch.load(model_file))
     agent.policy_network.eval()
-
-    for _ in range(10):
+    average_time = []
+    success_rate = []
+    start_time = time.time()
+    for _ in range(100):
         state = env.reset()[0]
         total_reward = 0
         while True:
@@ -335,10 +337,17 @@ def test_model(model_file):
             total_reward += reward
             env.render()
             if done:
+                average_time.append(start_time)
+                start_time = time.time()
+                if reward > 300:success_rate.append(1)
+                else:success_rate.append(0)
                 print(f"Test completed with reward: {total_reward}")
                 break
     time.sleep(5)
     env.close()
+    
+    print("Average time:", sum(average_time) / len(average_time), "seconds")
+    print("Average success rate:", sum(success_rate) / len(success_rate))
 
 def load_and_render_simulator():
     env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
@@ -353,7 +362,7 @@ def load_and_render_simulator():
 ## if there is training data available. Check if the model file exists
 version = 10
 usersName = "PK"
-previous_model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version-2) + "_" + usersName + ".pkl"
+previous_model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version-1) + "_" + usersName + ".pkl"
 model_file = "trainingPolicy/policy_network_run_around_maze_v" + str(version) + "_" + usersName + ".pkl"
 episode_reach_goal_plot = "trainingPolicy/episode_reach_goal_plot_v" + str(version) + "_" + usersName + ".png"
 episode_reward_plot = "trainingPolicy/episode_reward_plot_v" + str(version) + "_" + usersName + ".png"
