@@ -319,12 +319,14 @@ def train_model():
     # plt.show()
 
 def test_model(model_file):
-    env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
+    env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=False, isDiscrete=True)
     agent = DQN_Solver(env)
     agent.policy_network.load_state_dict(torch.load(model_file))
     agent.policy_network.eval()
-
-    for _ in range(10):
+    average_time = []
+    success_rate = []
+    start_time = time.time()
+    for _ in range(100):
         state = env.reset()[0]
         total_reward = 0
         while True:
@@ -335,10 +337,17 @@ def test_model(model_file):
             total_reward += reward
             env.render()
             if done:
+                average_time.append(start_time)
+                start_time = time.time()
+                if reward > 300:success_rate.append(1)
+                else:success_rate.append(0)
                 print(f"Test completed with reward: {total_reward}")
                 break
     time.sleep(5)
     env.close()
+    
+    print("Average time:", sum(average_time) / len(average_time), "seconds")
+    print("Average success rate:", sum(success_rate) / len(success_rate))
 
 def load_and_render_simulator():
     env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
