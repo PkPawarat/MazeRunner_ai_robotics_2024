@@ -71,11 +71,13 @@ To deploy and utilize MazeRunner, adhere to the following steps:
 
 ## Contributors
 
+
 - Pawarat Phatthanaphusakun 13662352 - Lead Software Developer & Project Manager
 - Laurentius Setiadharma 14018295 - Assistant Manager
 - Zahead Rashidi 13366378 - Contributor
 - Mostafa Rahimi 13914736 - Contributor
 - Hamish McEwan 14397273 - Contributor
+
 
 ## Demo
 
