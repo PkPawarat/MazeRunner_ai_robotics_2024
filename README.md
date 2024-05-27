@@ -71,13 +71,15 @@ To deploy and utilize MazeRunner, adhere to the following steps:
 
 ## Contributors
 
-
 - Pawarat Phatthanaphusakun 13662352 - Lead Software Developer & Project Manager
 - Laurentius Setiadharma 14018295 - Assistant Manager
 - Zahead Rashidi 13366378 - Contributor
 - Mostafa Rahimi 13914736 - Contributor
 - Hamish McEwan 14397273 - Contributor
 
+## Documentation
+
+Detailed documentation for this project: [[Documentation]](https://pkpawarat.github.io/MazeRunner_ai_robotics_2024/)
 
 ## Demo
 
